@@ -580,19 +580,19 @@ function renderNetwork(data) {
         .data(familyList)
         .join("g");
 
-    // Background rect + text for each family label
+    // Background rect + text for each family label — large and prominent
     familyLabels.append("rect")
-        .attr("rx", 4)
-        .attr("ry", 4)
-        .attr("fill", "rgba(255,255,255,0.82)")
+        .attr("rx", 8)
+        .attr("ry", 8)
+        .attr("fill", "rgba(255,255,255,0.88)")
         .attr("stroke", d => familyColor(d))
-        .attr("stroke-width", 1.5)
-        .attr("stroke-opacity", 0.5);
+        .attr("stroke-width", 2)
+        .attr("stroke-opacity", 0.7);
 
     familyLabels.append("text")
         .text(d => d)
-        .attr("font-size", "10.5px")
-        .attr("font-weight", 600)
+        .attr("font-size", "15px")
+        .attr("font-weight", 700)
         .attr("font-family", "-apple-system, sans-serif")
         .attr("fill", d => familyColor(d))
         .attr("text-anchor", "middle")
@@ -603,12 +603,13 @@ function renderNetwork(data) {
     svg.node().appendChild(node.node().parentNode);
 
     // Tick
+    const pad = { left: 20, right: 120, top: 30, bottom: 20 };
     simulation.on("tick", () => {
-        // Keep nodes within bounds
+        // Keep nodes + labels fully within viewBox
         data.nodes.forEach(d => {
             const r = radiusScale(d.centrality);
-            d.x = Math.max(r + 60, Math.min(width - r - 60, d.x));
-            d.y = Math.max(r + 10, Math.min(height - r - 10, d.y));
+            d.x = Math.max(pad.left + r, Math.min(width - pad.right - r, d.x));
+            d.y = Math.max(pad.top + r, Math.min(height - pad.bottom - r, d.y));
         });
 
         link
@@ -624,19 +625,22 @@ function renderNetwork(data) {
             const members = data.nodes.filter(n => n.family === family);
             if (members.length === 0) return;
             const cx = d3.mean(members, m => m.x);
-            const cy = d3.mean(members, m => m.y) - 28;  // float above
+            const cy = d3.mean(members, m => m.y) - 35;  // float above cluster
 
             const g = d3.select(this);
             const textEl = g.select("text");
-            textEl.attr("x", cx).attr("y", cy);
+            // Clamp label position within viewBox
+            const clampedX = Math.max(60, Math.min(width - 60, cx));
+            const clampedY = Math.max(20, Math.min(height - 20, cy));
+            textEl.attr("x", clampedX).attr("y", clampedY);
 
-            // Size the background rect to fit text
+            // Size the background rect to fit text with generous padding
             const bbox = textEl.node().getBBox();
             g.select("rect")
-                .attr("x", bbox.x - 5)
-                .attr("y", bbox.y - 2)
-                .attr("width", bbox.width + 10)
-                .attr("height", bbox.height + 4);
+                .attr("x", bbox.x - 10)
+                .attr("y", bbox.y - 5)
+                .attr("width", bbox.width + 20)
+                .attr("height", bbox.height + 10);
         });
     });
 
@@ -650,8 +654,9 @@ function renderNetwork(data) {
         document.body.style.webkitUserSelect = "none";
     }
     function dragged(event) {
-        event.subject.fx = event.x;
-        event.subject.fy = event.y;
+        const r = radiusScale(event.subject.centrality);
+        event.subject.fx = Math.max(pad.left + r, Math.min(width - pad.right - r, event.x));
+        event.subject.fy = Math.max(pad.top + r, Math.min(height - pad.bottom - r, event.y));
     }
     function dragended(event) {
         if (!event.active) simulation.alphaTarget(0);
