@@ -434,7 +434,9 @@ function renderNetwork(data) {
         .attr("viewBox", `0 0 ${width} ${height}`)
         .attr("preserveAspectRatio", "xMidYMid meet")
         .style("width", "100%")
-        .style("height", height + "px");
+        .style("height", height + "px")
+        .style("user-select", "none")
+        .style("-webkit-user-select", "none");
 
     svg.selectAll("*").remove();
 
@@ -664,6 +666,11 @@ function renderNetwork(data) {
         .join("g");
 
     // Background rect + text for each family label — large and prominent
+    familyLabels
+        .style("pointer-events", "none")
+        .style("user-select", "none")
+        .style("-webkit-user-select", "none");
+
     familyLabels.append("rect")
         .attr("rx", 8)
         .attr("ry", 8)
@@ -679,8 +686,7 @@ function renderNetwork(data) {
         .attr("font-family", "-apple-system, sans-serif")
         .attr("fill", d => familyColor(d))
         .attr("text-anchor", "middle")
-        .attr("dominant-baseline", "central")
-        .style("pointer-events", "none");
+        .attr("dominant-baseline", "central");
 
     // Re-append node group so nodes render on top of family labels
     svg.node().appendChild(node.node().parentNode);
@@ -734,8 +740,7 @@ function renderNetwork(data) {
         if (!event.active) simulation.alphaTarget(0.3).restart();
         event.subject.fx = event.subject.x;
         event.subject.fy = event.subject.y;
-        // Prevent text selection across the SVG during drag
-        svg.style("user-select", "none");
+        // Block text selection on the page during drag
         document.body.style.userSelect = "none";
         document.body.style.webkitUserSelect = "none";
     }
@@ -748,7 +753,6 @@ function renderNetwork(data) {
         if (!event.active) simulation.alphaTarget(0);
         event.subject.fx = null;
         event.subject.fy = null;
-        svg.style("user-select", null);
         document.body.style.userSelect = "";
         document.body.style.webkitUserSelect = "";
     }
