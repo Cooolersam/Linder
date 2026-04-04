@@ -454,16 +454,31 @@ function renderNetwork(data) {
         .domain(scoreExtent)
         .range([0.5, 7]);
 
-    // Custom force: extra repulsion between different families
+    // ---- Family home regions ----
+    // Assign each family a target zone on the graph. Nodes gravitate back
+    // to their zone so families cluster visually and recover after dragging.
+    const uniqueFamilies = [...new Set(data.nodes.map(n => n.family))];
+    const familyTargets = {};
+    const cx = width / 2, cy = height / 2;
+    const rx = width * 0.33, ry = height * 0.33;
+    uniqueFamilies.forEach((fam, i) => {
+        const angle = (2 * Math.PI * i) / uniqueFamilies.length - Math.PI / 2;
+        familyTargets[fam] = {
+            x: cx + rx * Math.cos(angle),
+            y: cy + ry * Math.sin(angle),
+        };
+    });
+
+    // Custom force: strong repulsion between different families
     function familyRepulsion(alpha) {
-        const strength = 12;
+        const strength = 25;
         for (let i = 0; i < data.nodes.length; i++) {
             for (let j = i + 1; j < data.nodes.length; j++) {
                 const a = data.nodes[i], b = data.nodes[j];
-                if (a.family === b.family) continue;  // same family = no extra push
+                if (a.family === b.family) continue;
                 const dx = a.x - b.x, dy = a.y - b.y;
                 const dist = Math.sqrt(dx * dx + dy * dy) || 1;
-                if (dist > 300) continue;  // only push nearby cross-family nodes
+                if (dist > 350) continue;
                 const force = strength * alpha / dist;
                 const fx = dx / dist * force, fy = dy / dist * force;
                 a.vx += fx; a.vy += fy;
@@ -472,30 +487,44 @@ function renderNetwork(data) {
         }
     }
 
-    // Force simulation — spread nodes out, cluster by family
+    // Custom force: pull nodes toward their family's home zone
+    function familyGravity(alpha) {
+        const strength = 0.08;
+        data.nodes.forEach(d => {
+            const target = familyTargets[d.family];
+            if (!target) return;
+            d.vx += (target.x - d.x) * strength * alpha;
+            d.vy += (target.y - d.y) * strength * alpha;
+        });
+    }
+
+    // Force simulation — family-clustered layout
     const simulation = d3.forceSimulation(data.nodes)
         .force("link", d3.forceLink(data.edges)
             .id(d => d.id)
             .distance(d => {
                 const src = typeof d.source === "object" ? d.source : data.nodes.find(n => n.id === d.source);
                 const tgt = typeof d.target === "object" ? d.target : data.nodes.find(n => n.id === d.target);
-                // Same family = pull tighter, different family = longer links
                 const sameFamily = src && tgt && src.family === tgt.family;
                 return sameFamily
-                    ? 150 * (1 - d.score) + 30
-                    : 280 * (1 - d.score) + 80;
+                    ? 100 * (1 - d.score) + 25
+                    : 250 * (1 - d.score) + 100;
             })
-            .strength(d => d.score * 0.5))
+            .strength(d => {
+                const src = typeof d.source === "object" ? d.source : data.nodes.find(n => n.id === d.source);
+                const tgt = typeof d.target === "object" ? d.target : data.nodes.find(n => n.id === d.target);
+                const sameFamily = src && tgt && src.family === tgt.family;
+                return sameFamily ? d.score * 0.7 : d.score * 0.2;
+            }))
         .force("charge", d3.forceManyBody()
-            .strength(-800)
-            .distanceMax(600))
-        .force("center", d3.forceCenter(width / 2, height / 2))
+            .strength(-600)
+            .distanceMax(500))
         .force("collision", d3.forceCollide()
-            .radius(d => radiusScale(d.centrality) + 35)
-            .strength(0.8))
+            .radius(d => radiusScale(d.centrality) + 30)
+            .strength(0.7))
         .force("familyRepulsion", familyRepulsion)
-        .force("x", d3.forceX(width / 2).strength(0.025))
-        .force("y", d3.forceY(height / 2).strength(0.025));
+        .force("familyGravity", familyGravity)
+        .force("center", d3.forceCenter(cx, cy).strength(0.02));
 
     // Draw edges — width shows connection strength
     const link = svg.append("g")
