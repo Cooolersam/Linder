@@ -409,6 +409,10 @@ function std(arr) {
 // ---- Network Graph ----
 
 async function loadAndRenderNetwork() {
+    if (typeof d3 === "undefined") {
+        console.warn("D3.js not loaded, skipping network graph");
+        return;
+    }
     try {
         const resp = await fetch(`${DATA_BASE}/network.json`);
         const data = await resp.json();
@@ -420,13 +424,14 @@ async function loadAndRenderNetwork() {
 
 function renderNetwork(data) {
     const container = document.getElementById("networkContainer");
-    const width = container.clientWidth;
-    const height = Math.max(600, Math.min(800, width * 0.65));
+    const width = Math.max(800, container.clientWidth || 1000);
+    const height = Math.max(600, Math.min(800, width * 0.6));
 
     const svg = d3.select("#networkSvg")
-        .attr("viewBox", [0, 0, width, height])
-        .attr("width", width)
-        .attr("height", height);
+        .attr("viewBox", `0 0 ${width} ${height}`)
+        .attr("preserveAspectRatio", "xMidYMid meet")
+        .style("width", "100%")
+        .style("height", height + "px");
 
     svg.selectAll("*").remove();
 
@@ -619,6 +624,9 @@ async function loadAndRenderHeatmap() {
     try {
         const resp = await fetch(`${DATA_BASE}/cross_matrix.json`);
         crossData = await resp.json();
+        // Filter out Bengali (unreliable due to small sample sizes)
+        crossData.languages = crossData.languages.filter(l => l.code !== "bn");
+        crossData.pairs = crossData.pairs.filter(p => p.a !== "bn" && p.b !== "bn");
         renderHeatmap("family");
 
         document.getElementById("heatmapSort").addEventListener("change", (e) => {
@@ -740,9 +748,10 @@ function renderHeatmap(sortMode) {
     // Tooltip on hover
     const tooltip = document.getElementById("heatmapTooltip");
     canvas.onmousemove = (e) => {
-        const rect = canvas.getBoundingClientRect();
-        const mx = e.clientX - rect.left;
-        const my = e.clientY - rect.top;
+        // Use offsetX/offsetY — always relative to the canvas element,
+        // regardless of page scroll or container scroll position
+        const mx = e.offsetX;
+        const my = e.offsetY;
         const col = Math.floor((mx - labelWidth) / cellSize);
         const row = Math.floor((my - labelHeight) / cellSize);
 

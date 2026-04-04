@@ -299,6 +299,7 @@ td.score-cell {
 .network-container svg {
     display: block;
     width: 100%;
+    min-height: 600px;
     cursor: grab;
 }
 
