@@ -459,7 +459,7 @@ function renderNetwork(data) {
             .distance(d => 250 * (1 - d.score) + 60)  // wider base distance
             .strength(d => d.score * 0.5))
         .force("charge", d3.forceManyBody()
-            .strength(-500)
+            .strength(-750)
             .distanceMax(600))
         .force("center", d3.forceCenter(width / 2, height / 2))
         .force("collision", d3.forceCollide()
