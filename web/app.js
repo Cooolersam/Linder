@@ -443,14 +443,11 @@ function renderNetwork(data) {
         .domain(centralityExtent)
         .range([6, 22]);
 
-    // Scale edge width and opacity by score
+    // Scale edge width by score — thickness encodes strength, not opacity
     const scoreExtent = d3.extent(data.edges, d => d.score);
     const edgeWidthScale = d3.scaleLinear()
         .domain(scoreExtent)
-        .range([1, 5]);
-    const edgeOpacityScale = d3.scaleLinear()
-        .domain(scoreExtent)
-        .range([0.15, 0.6]);
+        .range([0.5, 7]);
 
     // Force simulation — spread nodes out for readability
     const simulation = d3.forceSimulation(data.nodes)
@@ -468,14 +465,14 @@ function renderNetwork(data) {
         .force("x", d3.forceX(width / 2).strength(0.03))
         .force("y", d3.forceY(height / 2).strength(0.03));
 
-    // Draw edges
+    // Draw edges — width shows connection strength
     const link = svg.append("g")
         .selectAll("line")
         .data(data.edges)
         .join("line")
-        .attr("stroke", "#b0b0b0")
+        .attr("stroke", "#c0c0c0")
         .attr("stroke-width", d => edgeWidthScale(d.score))
-        .attr("stroke-opacity", d => edgeOpacityScale(d.score));
+        .attr("stroke-opacity", 0.45);
 
     // Draw nodes
     const node = svg.append("g")
@@ -495,17 +492,18 @@ function renderNetwork(data) {
         .attr("stroke-width", 1.5)
         .style("cursor", "pointer");
 
-    // Node labels
+    // Node labels — all readable, larger nodes get slightly bigger text
     node.append("text")
         .text(d => d.name)
-        .attr("dx", d => radiusScale(d.centrality) + 4)
+        .attr("dx", d => radiusScale(d.centrality) + 5)
         .attr("dy", "0.35em")
         .attr("font-size", d => {
             const r = radiusScale(d.centrality);
-            return r > 14 ? "11px" : r > 10 ? "9.5px" : "8px";
+            return r > 16 ? "12.5px" : r > 12 ? "11.5px" : "11px";
         })
+        .attr("font-weight", 500)
         .attr("font-family", "-apple-system, sans-serif")
-        .attr("fill", "#333")
+        .attr("fill", "#1a1a1a")
         .style("pointer-events", "none")
         .style("user-select", "none");
 
@@ -513,11 +511,11 @@ function renderNetwork(data) {
     node.on("mouseover", function(event, d) {
         // Highlight connected edges
         link.attr("stroke", l =>
-            (l.source.id === d.id || l.target.id === d.id) ? familyColor(d.family) : "#e0e0e0"
+            (l.source.id === d.id || l.target.id === d.id) ? familyColor(d.family) : "#e8e8e8"
         ).attr("stroke-opacity", l =>
-            (l.source.id === d.id || l.target.id === d.id) ? 0.8 : 0.08
+            (l.source.id === d.id || l.target.id === d.id) ? 0.85 : 0.15
         ).attr("stroke-width", l =>
-            (l.source.id === d.id || l.target.id === d.id) ? edgeWidthScale(l.score) * 1.5 : edgeWidthScale(l.score)
+            (l.source.id === d.id || l.target.id === d.id) ? edgeWidthScale(l.score) * 1.4 : edgeWidthScale(l.score) * 0.5
         );
 
         // Dim unconnected nodes
@@ -565,13 +563,44 @@ function renderNetwork(data) {
         tooltip.style.top = (event.clientY - 14) + "px";
     })
     .on("mouseout", function() {
-        link.attr("stroke", "#b0b0b0")
-            .attr("stroke-opacity", d => edgeOpacityScale(d.score))
+        link.attr("stroke", "#c0c0c0")
+            .attr("stroke-opacity", 0.45)
             .attr("stroke-width", d => edgeWidthScale(d.score));
         node.select("circle").attr("opacity", 1);
         node.select("text").attr("opacity", 1);
         tooltip.style.display = "none";
     });
+
+    // Family labels — floating above edges, positioned at cluster centroids
+    const familyList = [...new Set(data.nodes.map(n => n.family))];
+
+    // Layer order: edges -> family labels -> nodes (so labels sit between)
+    const familyLabelGroup = svg.append("g").attr("class", "family-labels");
+    const familyLabels = familyLabelGroup.selectAll("g")
+        .data(familyList)
+        .join("g");
+
+    // Background rect + text for each family label
+    familyLabels.append("rect")
+        .attr("rx", 4)
+        .attr("ry", 4)
+        .attr("fill", "rgba(255,255,255,0.82)")
+        .attr("stroke", d => familyColor(d))
+        .attr("stroke-width", 1.5)
+        .attr("stroke-opacity", 0.5);
+
+    familyLabels.append("text")
+        .text(d => d)
+        .attr("font-size", "10.5px")
+        .attr("font-weight", 600)
+        .attr("font-family", "-apple-system, sans-serif")
+        .attr("fill", d => familyColor(d))
+        .attr("text-anchor", "middle")
+        .attr("dominant-baseline", "central")
+        .style("pointer-events", "none");
+
+    // Re-append node group so nodes render on top of family labels
+    svg.node().appendChild(node.node().parentNode);
 
     // Tick
     simulation.on("tick", () => {
@@ -589,6 +618,26 @@ function renderNetwork(data) {
             .attr("y2", d => d.target.y);
 
         node.attr("transform", d => `translate(${d.x},${d.y})`);
+
+        // Update family label positions at cluster centroids
+        familyLabels.each(function(family) {
+            const members = data.nodes.filter(n => n.family === family);
+            if (members.length === 0) return;
+            const cx = d3.mean(members, m => m.x);
+            const cy = d3.mean(members, m => m.y) - 28;  // float above
+
+            const g = d3.select(this);
+            const textEl = g.select("text");
+            textEl.attr("x", cx).attr("y", cy);
+
+            // Size the background rect to fit text
+            const bbox = textEl.node().getBBox();
+            g.select("rect")
+                .attr("x", bbox.x - 5)
+                .attr("y", bbox.y - 2)
+                .attr("width", bbox.width + 10)
+                .attr("height", bbox.height + 4);
+        });
     });
 
     function dragstarted(event) {
