@@ -38,33 +38,39 @@ function scoreColor(score) {
     return "var(--red)";
 }
 
-// ---- Tabs ----
-const renderedTabs = new Set();
+// ---- View navigation ----
+const renderedViews = new Set();
 
-function initTabs() {
-    document.querySelectorAll(".tabs-bar .tab").forEach(btn => {
-        btn.addEventListener("click", () => {
-            document.querySelectorAll(".tabs-bar .tab").forEach(b => b.classList.remove("active"));
-            document.querySelectorAll(".tab-panel").forEach(p => p.classList.remove("active"));
-            btn.classList.add("active");
-            const panel = document.getElementById(`tab-${btn.dataset.tab}`);
-            panel.classList.add("active");
-            // Lazy-render charts on first tab visit (canvas must be visible)
-            renderTabContent(btn.dataset.tab);
-        });
-    });
+function showView(viewId) {
+    // Hide everything
+    document.getElementById("overview").classList.add("hidden");
+    document.getElementById("detail").classList.add("hidden");
+    document.querySelectorAll(".view-page").forEach(p => p.classList.add("hidden"));
+
+    // Show the requested view
+    const el = document.getElementById(`view-${viewId}`);
+    if (el) {
+        el.classList.remove("hidden");
+        window.scrollTo(0, 0);
+        // Lazy-render on first visit
+        if (!renderedViews.has(viewId)) {
+            renderedViews.add(viewId);
+            switch (viewId) {
+                case "heatmap": loadAndRenderHeatmap(); break;
+                case "rankings": renderMainChart(); break;
+                case "families": renderFamilyChart(); break;
+                case "distribution": renderBandsChart(); break;
+                case "data": renderTable(); break;
+            }
+        }
+    }
 }
 
-function renderTabContent(tabId) {
-    if (renderedTabs.has(tabId)) return;
-    renderedTabs.add(tabId);
-    switch (tabId) {
-        case "heatmap": loadAndRenderHeatmap(); break;
-        case "rankings": renderMainChart(); break;
-        case "families": renderFamilyChart(); break;
-        case "distribution": renderBandsChart(); break;
-        case "data": renderTable(); break;
-    }
+function showOverview() {
+    document.querySelectorAll(".view-page").forEach(p => p.classList.add("hidden"));
+    document.getElementById("detail").classList.add("hidden");
+    document.getElementById("overview").classList.remove("hidden");
+    window.scrollTo(0, 0);
 }
 
 // ---- Init ----
@@ -72,10 +78,6 @@ async function init() {
     const resp = await fetch(`${DATA_BASE}/summary.json`);
     summaryData = await resp.json();
     document.getElementById("lang-count").textContent = summaryData.length;
-    initTabs();
-    // Render the default active tab (heatmap)
-    renderTabContent("heatmap");
-    // Network is always visible, render immediately
     loadAndRenderNetwork();
 }
 
@@ -299,6 +301,7 @@ async function showDetail(code) {
     const info = data.info;
 
     document.getElementById("overview").classList.add("hidden");
+    document.querySelectorAll(".view-page").forEach(p => p.classList.add("hidden"));
     document.getElementById("detail").classList.remove("hidden");
     window.scrollTo(0, 0);
 

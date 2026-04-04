@@ -28,7 +28,7 @@
         </p>
       </section>
 
-      <!-- Network graph — always visible as the hero visualization -->
+      <!-- Network graph -->
       <section class="section">
         <div class="network-container" id="networkContainer">
           <svg id="networkSvg"></svg>
@@ -37,158 +37,194 @@
         <div class="network-legend" id="networkLegend"></div>
       </section>
 
-      <!-- Tab bar -->
-      <div class="tabs-bar">
-        <button class="tab active" data-tab="heatmap">Heatmap</button>
-        <button class="tab" data-tab="rankings">Rankings</button>
-        <button class="tab" data-tab="families">Families</button>
-        <button class="tab" data-tab="distribution">Distribution</button>
-        <button class="tab" data-tab="data">Data Table</button>
-        <button class="tab" data-tab="method">Method</button>
-      </div>
+      <!-- Card grid -->
+      <section class="section">
+        <div class="card-grid">
+          <div class="nav-card" onclick="showView('heatmap')">
+            <div class="nav-card-icon">
+              <svg width="48" height="48" viewBox="0 0 48 48" fill="none"><rect x="4" y="4" width="12" height="12" rx="2" fill="#2171b5" opacity="0.9"/><rect x="18" y="4" width="12" height="12" rx="2" fill="#6baed6" opacity="0.7"/><rect x="32" y="4" width="12" height="12" rx="2" fill="#c6dbef" opacity="0.5"/><rect x="4" y="18" width="12" height="12" rx="2" fill="#6baed6" opacity="0.7"/><rect x="18" y="18" width="12" height="12" rx="2" fill="#2171b5" opacity="0.9"/><rect x="32" y="18" width="12" height="12" rx="2" fill="#6baed6" opacity="0.7"/><rect x="4" y="32" width="12" height="12" rx="2" fill="#c6dbef" opacity="0.5"/><rect x="18" y="32" width="12" height="12" rx="2" fill="#6baed6" opacity="0.7"/><rect x="32" y="32" width="12" height="12" rx="2" fill="#2171b5" opacity="0.9"/></svg>
+            </div>
+            <h3>Heatmap</h3>
+            <p>Every language compared to every other in a pairwise similarity matrix.</p>
+          </div>
 
-      <!-- Tab panels -->
-      <div class="tab-content">
+          <div class="nav-card" onclick="showView('rankings')">
+            <div class="nav-card-icon">
+              <svg width="48" height="48" viewBox="0 0 48 48" fill="none"><rect x="4" y="30" width="8" height="14" rx="2" fill="#6baed6"/><rect x="14" y="22" width="8" height="22" rx="2" fill="#4292c6"/><rect x="24" y="14" width="8" height="30" rx="2" fill="#2171b5"/><rect x="34" y="6" width="8" height="38" rx="2" fill="#08519c"/></svg>
+            </div>
+            <h3>Rankings</h3>
+            <p>Which languages are most similar to English? Ranked by composite score.</p>
+          </div>
 
-        <!-- Heatmap tab -->
-        <div class="tab-panel active" id="tab-heatmap">
-          <section class="section">
-            <h2>Every Language vs Every Language</h2>
-            <p class="section-desc">
-              All 50 languages compared pairwise. For non-English pairs, English
-              serves as a pivot — both translations are romanized and scored
-              against each other. Hover for details.
-            </p>
-            <div class="heatmap-controls">
-              <label>Sort by:
-                <select id="heatmapSort">
-                  <option value="avg">Avg Similarity</option>
-                  <option value="name">Alphabetical</option>
-                  <option value="family">Language Family</option>
-                </select>
-              </label>
+          <div class="nav-card" onclick="showView('families')">
+            <div class="nav-card-icon">
+              <svg width="48" height="48" viewBox="0 0 48 48" fill="none"><circle cx="14" cy="20" r="8" fill="#E91E63" opacity="0.7"/><circle cx="34" cy="20" r="8" fill="#2196F3" opacity="0.7"/><circle cx="24" cy="34" r="8" fill="#4CAF50" opacity="0.7"/><circle cx="24" cy="20" r="5" fill="#9C27B0" opacity="0.5"/></svg>
             </div>
-            <div class="heatmap-container">
-              <canvas id="heatmapCanvas"></canvas>
-              <div id="heatmapTooltip" class="heatmap-tooltip"></div>
+            <h3>Families</h3>
+            <p>Similarity grouped by language family — Romance, Germanic, Slavic, and more.</p>
+          </div>
+
+          <div class="nav-card" onclick="showView('distribution')">
+            <div class="nav-card-icon">
+              <svg width="48" height="48" viewBox="0 0 48 48" fill="none"><rect x="4" y="8" width="30" height="9" rx="2" fill="#22863a"/><rect x="4" y="19" width="18" height="9" rx="2" fill="#d19a00"/><rect x="4" y="30" width="40" height="9" rx="2" fill="#cb2431"/></svg>
             </div>
-            <div class="heatmap-legend">
-              <span>0.0</span>
-              <div class="heatmap-gradient"></div>
-              <span>1.0</span>
+            <h3>Distribution</h3>
+            <p>What proportion of word pairs are highly similar, moderate, or dissimilar?</p>
+          </div>
+
+          <div class="nav-card" onclick="showView('data')">
+            <div class="nav-card-icon">
+              <svg width="48" height="48" viewBox="0 0 48 48" fill="none"><rect x="6" y="6" width="36" height="36" rx="4" stroke="#6baed6" stroke-width="2" fill="none"/><line x1="6" y1="16" x2="42" y2="16" stroke="#6baed6" stroke-width="1.5"/><line x1="6" y1="26" x2="42" y2="26" stroke="#6baed6" stroke-width="1.5" opacity="0.5"/><line x1="6" y1="36" x2="42" y2="36" stroke="#6baed6" stroke-width="1.5" opacity="0.5"/><line x1="20" y1="6" x2="20" y2="42" stroke="#6baed6" stroke-width="1.5" opacity="0.5"/></svg>
             </div>
-            <div id="heatmapTopPairs" class="section" style="margin-top: 24px"></div>
-          </section>
+            <h3>Data Table</h3>
+            <p>Sortable table of all 50 languages with detailed similarity metrics.</p>
+          </div>
+
+          <div class="nav-card" onclick="showView('method')">
+            <div class="nav-card-icon">
+              <svg width="48" height="48" viewBox="0 0 48 48" fill="none"><circle cx="24" cy="24" r="16" stroke="#6baed6" stroke-width="2" fill="none"/><text x="24" y="30" text-anchor="middle" font-size="20" font-weight="700" fill="#6baed6">?</text></svg>
+            </div>
+            <h3>Method</h3>
+            <p>How the composite score is calculated and what it measures.</p>
+          </div>
         </div>
+      </section>
+    </main>
 
-        <!-- Rankings tab -->
-        <div class="tab-panel" id="tab-rankings">
-          <section class="section">
-            <h2>Similarity to English</h2>
-            <p class="section-desc">
-              Average composite score for each language compared to English. Click
-              any bar to explore that language's word pairs.
-            </p>
-            <div class="chart-wrap chart-tall">
-              <canvas id="chartMain"></canvas>
-            </div>
-          </section>
+    <!-- VIEW PAGES (one per card) -->
+    <main id="view-heatmap" class="view-page hidden">
+      <section class="view-header">
+        <button class="back-btn" onclick="showOverview()">&#8592; Back</button>
+        <h1>Every Language vs Every Language</h1>
+        <p class="section-desc">All 50 languages compared pairwise. English serves as a pivot for non-English pairs. Hover for details.</p>
+      </section>
+      <section class="section">
+        <div class="heatmap-controls">
+          <label>Sort by:
+            <select id="heatmapSort">
+              <option value="avg">Avg Similarity</option>
+              <option value="name">Alphabetical</option>
+              <option value="family">Language Family</option>
+            </select>
+          </label>
         </div>
-
-        <!-- Families tab -->
-        <div class="tab-panel" id="tab-families">
-          <section class="section">
-            <h2>Similarity to English by Family</h2>
-            <p class="section-desc">
-              Mean composite score per language family compared to English, with
-              standard deviation.
-            </p>
-            <div class="chart-wrap">
-              <canvas id="chartFamily"></canvas>
-            </div>
-          </section>
+        <div class="heatmap-container">
+          <canvas id="heatmapCanvas"></canvas>
+          <div id="heatmapTooltip" class="heatmap-tooltip"></div>
         </div>
-
-        <!-- Distribution tab -->
-        <div class="tab-panel" id="tab-distribution">
-          <section class="section">
-            <h2>Similarity Distribution (vs English)</h2>
-            <p class="section-desc">
-              What proportion of each language's English translation pairs are
-              highly similar, moderately similar, or dissimilar?
-            </p>
-            <div class="chart-wrap chart-tall">
-              <canvas id="chartBands"></canvas>
-            </div>
-          </section>
+        <div class="heatmap-legend">
+          <span>0.0</span>
+          <div class="heatmap-gradient"></div>
+          <span>1.0</span>
         </div>
+        <div id="heatmapTopPairs" style="margin-top: 24px"></div>
+      </section>
+    </main>
 
-        <!-- Data Table tab -->
-        <div class="tab-panel" id="tab-data">
-          <section class="section">
-            <h2>All Languages (vs English)</h2>
-            <div class="table-wrap">
-              <table id="langTable">
-                <thead>
-                  <tr>
-                    <th class="sortable" data-sort="lang">Language</th>
-                    <th class="sortable" data-sort="family">Family</th>
-                    <th class="sortable sorted-desc" data-sort="avg">Avg Score</th>
-                    <th class="sortable" data-sort="high_pct">High %</th>
-                    <th class="sortable" data-sort="mid_pct">Mid %</th>
-                    <th class="sortable" data-sort="low_pct">Low %</th>
-                    <th class="sortable" data-sort="n">Pairs</th>
-                  </tr>
-                </thead>
-                <tbody></tbody>
-              </table>
-            </div>
-          </section>
+    <main id="view-rankings" class="view-page hidden">
+      <section class="view-header">
+        <button class="back-btn" onclick="showOverview()">&#8592; Back</button>
+        <h1>Similarity to English</h1>
+        <p class="section-desc">Average composite score for each language compared to English. Click any bar to explore word pairs.</p>
+      </section>
+      <section class="section">
+        <div class="chart-wrap chart-tall">
+          <canvas id="chartMain"></canvas>
         </div>
+      </section>
+    </main>
 
-        <!-- Method tab -->
-        <div class="tab-panel" id="tab-method">
-          <section class="section">
-            <h2>How It Works</h2>
-            <div class="method-grid">
-              <div class="method-card">
-                <h3>Data Source</h3>
-                <p>Translation pairs from the MUSE bilingual dictionaries (Meta Research) and FreeDict. Up to 100k+ pairs per language.</p>
-              </div>
-              <div class="method-card">
-                <h3>Romanization</h3>
-                <p>Non-Latin scripts are romanized first: Pinyin for Chinese, IAST for Hindi/Bengali, Hepburn for Japanese, and Unidecode for Cyrillic, Arabic, Greek, etc.</p>
-              </div>
-              <div class="method-card">
-                <h3>Composite Score</h3>
-                <p>Weighted blend of 7 metrics: Levenshtein (30%), Jaro-Winkler (25%), Metaphone (15%), Soundex (10%), bigram (10%), trigram (5%), and length similarity (5%).</p>
-              </div>
-              <div class="method-card">
-                <h3>Cross-Language Comparison</h3>
-                <p>For non-English pairs, English is used as a pivot. Both translations are romanized and compared. This measures phonetic similarity of words for the same concept across any two languages.</p>
-              </div>
-            </div>
-          </section>
+    <main id="view-families" class="view-page hidden">
+      <section class="view-header">
+        <button class="back-btn" onclick="showOverview()">&#8592; Back</button>
+        <h1>Similarity by Language Family</h1>
+        <p class="section-desc">Mean composite score per language family compared to English, with standard deviation.</p>
+      </section>
+      <section class="section">
+        <div class="chart-wrap">
+          <canvas id="chartFamily"></canvas>
         </div>
+      </section>
+    </main>
 
-      </div>
+    <main id="view-distribution" class="view-page hidden">
+      <section class="view-header">
+        <button class="back-btn" onclick="showOverview()">&#8592; Back</button>
+        <h1>Similarity Distribution</h1>
+        <p class="section-desc">What proportion of each language's translation pairs are highly similar, moderate, or dissimilar?</p>
+      </section>
+      <section class="section">
+        <div class="chart-wrap chart-tall">
+          <canvas id="chartBands"></canvas>
+        </div>
+      </section>
+    </main>
+
+    <main id="view-data" class="view-page hidden">
+      <section class="view-header">
+        <button class="back-btn" onclick="showOverview()">&#8592; Back</button>
+        <h1>All Languages</h1>
+      </section>
+      <section class="section">
+        <div class="table-wrap">
+          <table id="langTable">
+            <thead>
+              <tr>
+                <th class="sortable" data-sort="lang">Language</th>
+                <th class="sortable" data-sort="family">Family</th>
+                <th class="sortable sorted-desc" data-sort="avg">Avg Score</th>
+                <th class="sortable" data-sort="high_pct">High %</th>
+                <th class="sortable" data-sort="mid_pct">Mid %</th>
+                <th class="sortable" data-sort="low_pct">Low %</th>
+                <th class="sortable" data-sort="n">Pairs</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+
+    <main id="view-method" class="view-page hidden">
+      <section class="view-header">
+        <button class="back-btn" onclick="showOverview()">&#8592; Back</button>
+        <h1>How It Works</h1>
+      </section>
+      <section class="section">
+        <div class="method-grid">
+          <div class="method-card">
+            <h3>Data Source</h3>
+            <p>Translation pairs from the MUSE bilingual dictionaries (Meta Research) and FreeDict. Up to 100k+ pairs per language.</p>
+          </div>
+          <div class="method-card">
+            <h3>Romanization</h3>
+            <p>Non-Latin scripts are romanized first: Pinyin for Chinese, IAST for Hindi/Bengali, Hepburn for Japanese, and Unidecode for Cyrillic, Arabic, Greek, etc.</p>
+          </div>
+          <div class="method-card">
+            <h3>Composite Score</h3>
+            <p>Weighted blend of 7 metrics: Levenshtein (30%), Jaro-Winkler (25%), Metaphone (15%), Soundex (10%), bigram (10%), trigram (5%), and length similarity (5%).</p>
+          </div>
+          <div class="method-card">
+            <h3>Cross-Language Comparison</h3>
+            <p>For non-English pairs, English is used as a pivot. Both translations are romanized and compared — measuring phonetic similarity of words for the same concept across any two languages.</p>
+          </div>
+        </div>
+      </section>
     </main>
 
     <!-- LANGUAGE DETAIL PAGE -->
-    <main id="detail" class="hidden">
-      <section class="detail-header">
-        <button class="back-btn" onclick="showOverview()">&#8592; All Languages</button>
+    <main id="detail" class="view-page hidden">
+      <section class="view-header">
+        <button class="back-btn" onclick="showOverview()">&#8592; Back</button>
         <h1 id="detailTitle"></h1>
         <div class="detail-stats" id="detailStats"></div>
       </section>
-
       <section class="section">
         <h2>Score Distribution</h2>
         <div class="chart-wrap">
           <canvas id="chartHist"></canvas>
         </div>
       </section>
-
       <section class="section">
         <h2 id="cognateTitle">Top Cognates</h2>
         <p class="section-desc">English translation pairs that look/sound most alike (excluding identical words).</p>
@@ -208,16 +244,14 @@
           </table>
         </div>
       </section>
-
       <section class="section" id="identicalSection">
         <h2>Identical Words</h2>
         <p class="section-desc">Words spelled the same in both languages.</p>
         <div class="tag-cloud" id="identicalCloud"></div>
       </section>
-
       <section class="section">
         <h2>Least Similar Pairs</h2>
-        <p class="section-desc">Translations that look nothing alike — different etymological roots.</p>
+        <p class="section-desc">Translations that look nothing alike.</p>
         <div class="table-wrap">
           <table id="bottomTable">
             <thead>

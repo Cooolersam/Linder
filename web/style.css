@@ -88,55 +88,70 @@ a:hover { text-decoration: underline; }
     line-height: 1.7;
 }
 
-/* ===== Tabs ===== */
-.tabs-bar {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 0 24px;
-    display: flex;
-    gap: 4px;
-    border-bottom: 2px solid var(--border);
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
+/* ===== Card Grid ===== */
+.card-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
 }
 
-.tab {
-    font-family: var(--font);
-    font-size: 0.9rem;
-    font-weight: 500;
-    color: var(--text-secondary);
-    background: none;
-    border: none;
-    padding: 12px 20px;
+.nav-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 32px 24px;
+    text-align: center;
     cursor: pointer;
-    white-space: nowrap;
-    border-bottom: 2px solid transparent;
-    margin-bottom: -2px;
-    transition: color 0.15s, border-color 0.15s;
+    transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s;
+    box-shadow: var(--shadow);
 }
 
-.tab:hover {
+.nav-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+    border-color: #c0c0c0;
+}
+
+.nav-card:active {
+    transform: translateY(0);
+}
+
+.nav-card-icon {
+    margin-bottom: 16px;
+}
+
+.nav-card h3 {
+    font-size: 1.15rem;
+    font-weight: 700;
+    margin-bottom: 8px;
     color: var(--text);
 }
 
-.tab.active {
-    color: var(--accent);
-    border-bottom-color: var(--accent);
-    font-weight: 600;
+.nav-card p {
+    font-size: 0.88rem;
+    color: var(--text-secondary);
+    line-height: 1.5;
 }
 
-.tab-content {
+/* ===== View Pages ===== */
+.view-page {
     max-width: 1200px;
     margin: 0 auto;
 }
 
-.tab-panel {
-    display: none;
-    padding-top: 32px;
+.view-header {
+    padding: 24px 24px 0;
 }
 
-.tab-panel.active {
-    display: block;
+.view-header h1 {
+    font-size: 1.8rem;
+    font-weight: 700;
+    margin: 16px 0 8px;
+    letter-spacing: -0.5px;
+}
+
+.view-header .section-desc {
+    margin-bottom: 24px;
 }
 
 /* ===== Sections ===== */
@@ -451,6 +466,10 @@ footer {
 }
 
 /* ===== Responsive ===== */
+@media (max-width: 900px) {
+    .card-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
 @media (max-width: 768px) {
     .hero h1 { font-size: 1.6rem; }
     .hero-sub { font-size: 0.95rem; }
@@ -460,6 +479,10 @@ footer {
     .detail-stats { gap: 16px; }
     .stat-value { font-size: 1.2rem; }
     td, th { padding: 7px 10px; }
-    .tabs-bar { padding: 0 16px; }
-    .tab { padding: 10px 14px; font-size: 0.82rem; }
+    .nav-card { padding: 24px 16px; }
+    .nav-card h3 { font-size: 1rem; }
+}
+
+@media (max-width: 500px) {
+    .card-grid { grid-template-columns: 1fr; }
 }
