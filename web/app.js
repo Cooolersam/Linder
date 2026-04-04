@@ -805,10 +805,13 @@ function renderHeatmap(sortMode) {
     // Tooltip on hover
     const tooltip = document.getElementById("heatmapTooltip");
     canvas.onmousemove = (e) => {
-        // Use offsetX/offsetY — always relative to the canvas element,
-        // regardless of page scroll or container scroll position
-        const mx = e.offsetX;
-        const my = e.offsetY;
+        // Convert mouse position to CSS-pixel coords within the canvas.
+        // getBoundingClientRect gives CSS size; divide to get ratio.
+        const rect = canvas.getBoundingClientRect();
+        const scaleX = width / rect.width;
+        const scaleY = height / rect.height;
+        const mx = (e.clientX - rect.left) * scaleX;
+        const my = (e.clientY - rect.top) * scaleY;
         const col = Math.floor((mx - labelWidth) / cellSize);
         const row = Math.floor((my - labelHeight) / cellSize);
 
