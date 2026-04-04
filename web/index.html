@@ -12,19 +12,19 @@
     <nav id="nav">
         <div class="nav-inner">
             <a href="#" class="logo" onclick="showOverview(); return false;">Linder</a>
-            <span class="nav-subtitle">How similar are the world's languages to English?</span>
+            <span class="nav-subtitle">How similar are the world's languages to each other?</span>
         </div>
     </nav>
 
     <!-- OVERVIEW PAGE -->
     <main id="overview">
         <section class="hero">
-            <h1>Cross-Language Similarity to English</h1>
+            <h1>Cross-Language Similarity</h1>
             <p class="hero-sub">
-                Measuring orthographic and phonetic similarity between English and
-                <strong id="lang-count">43</strong> languages across
-                <strong>17 language families</strong>.
-                Each translation pair is scored on how alike the words look and sound.
+                Measuring how alike <strong id="lang-count">44</strong> languages look and sound
+                across <strong>17 language families</strong> —
+                comparing every language to every other through orthographic and phonetic analysis
+                of translation pairs.
             </p>
         </section>
 
@@ -43,34 +43,34 @@
         </section>
 
         <section class="section">
-            <h2>Average Similarity by Language</h2>
-            <p class="section-desc">Click any bar to explore that language's word pairs in detail.</p>
+            <h2>Similarity to English</h2>
+            <p class="section-desc">Average composite score for each language compared to English. Click any bar to explore that language's word pairs.</p>
             <div class="chart-wrap chart-tall">
                 <canvas id="chartMain"></canvas>
             </div>
         </section>
 
         <section class="section">
-            <h2>By Language Family</h2>
-            <p class="section-desc">Mean composite score per language family, with standard deviation.</p>
+            <h2>Similarity to English by Family</h2>
+            <p class="section-desc">Mean composite score per language family compared to English, with standard deviation.</p>
             <div class="chart-wrap">
                 <canvas id="chartFamily"></canvas>
             </div>
         </section>
 
         <section class="section">
-            <h2>Similarity Distribution</h2>
-            <p class="section-desc">What proportion of translation pairs are highly similar, moderately similar, or dissimilar?</p>
+            <h2>Similarity Distribution (vs English)</h2>
+            <p class="section-desc">What proportion of each language's English translation pairs are highly similar, moderately similar, or dissimilar?</p>
             <div class="chart-wrap chart-tall">
                 <canvas id="chartBands"></canvas>
             </div>
         </section>
 
         <section class="section">
-            <h2>Language-to-Language Similarity</h2>
+            <h2>Every Language vs Every Language</h2>
             <p class="section-desc">
-                Every language compared to every other (903 pairs) via English-pivot translation.
-                Both words are romanized, then scored. Hover for details.
+                All 44 languages compared pairwise (946 pairs). For non-English pairs, English serves as
+                a pivot — both translations are romanized and scored against each other. Hover for details.
             </p>
             <div class="heatmap-controls">
                 <label>Sort by:
@@ -94,7 +94,7 @@
         </section>
 
         <section class="section">
-            <h2>All Languages</h2>
+            <h2>All Languages (vs English)</h2>
             <div class="table-wrap">
                 <table id="langTable">
                     <thead>
@@ -130,7 +130,7 @@
                 </div>
                 <div class="method-card">
                     <h3>What It Measures</h3>
-                    <p>How alike an English word and its translation <em>look and sound</em> in Latin script. High scores indicate cognates or phonetic borrowings.</p>
+                    <p>How alike words for the same concept <em>look and sound</em> across languages. High scores indicate cognates, shared loanwords, or phonetic borrowings. Cross-language pairs use English as a pivot.</p>
                 </div>
             </div>
         </section>
@@ -153,7 +153,7 @@
 
         <section class="section">
             <h2 id="cognateTitle">Top Cognates</h2>
-            <p class="section-desc">Translation pairs that look/sound most alike (excluding identical words).</p>
+            <p class="section-desc">English translation pairs that look/sound most alike (excluding identical words).</p>
             <div class="table-wrap">
                 <table id="cognateTable">
                     <thead>

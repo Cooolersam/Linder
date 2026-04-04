@@ -9,10 +9,21 @@ BASE_DIR = os.path.dirname(__file__)
 with open(os.path.join(BASE_DIR, "web", "data", "cross_matrix.json")) as f:
     data = json.load(f)
 
+with open(os.path.join(BASE_DIR, "web", "data", "summary.json")) as f:
+    summary = json.load(f)
+
 # Filter out Bengali (unreliable due to small sample sizes)
 EXCLUDE = {"bn"}
 langs = [l for l in data["languages"] if l["code"] not in EXCLUDE]
-matrix = data["matrix"]
+matrix = dict(data["matrix"])
+
+# Add English as a node using English-vs-each scores from summary.json
+en_scores = {s["code"]: s["avg"] for s in summary if s["code"] not in EXCLUDE}
+for code, score in en_scores.items():
+    matrix[f"en-{code}"] = score
+    matrix[f"{code}-en"] = score
+matrix["en-en"] = 1.0
+langs.append({"code": "en", "name": "English", "family": "Germanic"})
 
 # Compute centrality for each language (avg similarity to all others)
 centrality = {}
