@@ -424,8 +424,8 @@ async function loadAndRenderNetwork() {
 
 function renderNetwork(data) {
     const container = document.getElementById("networkContainer");
-    const width = Math.max(800, container.clientWidth || 1000);
-    const height = Math.max(600, Math.min(800, width * 0.6));
+    const width = Math.max(1000, container.clientWidth || 1200);
+    const height = Math.max(750, Math.min(950, width * 0.7));
 
     const svg = d3.select("#networkSvg")
         .attr("viewBox", `0 0 ${width} ${height}`)
@@ -452,20 +452,21 @@ function renderNetwork(data) {
         .domain(scoreExtent)
         .range([0.15, 0.6]);
 
-    // Force simulation
+    // Force simulation — spread nodes out for readability
     const simulation = d3.forceSimulation(data.nodes)
         .force("link", d3.forceLink(data.edges)
             .id(d => d.id)
-            .distance(d => 180 * (1 - d.score))  // similar = closer
-            .strength(d => d.score * 0.8))
+            .distance(d => 250 * (1 - d.score) + 60)  // wider base distance
+            .strength(d => d.score * 0.5))
         .force("charge", d3.forceManyBody()
-            .strength(-200)
-            .distanceMax(400))
+            .strength(-500)
+            .distanceMax(600))
         .force("center", d3.forceCenter(width / 2, height / 2))
         .force("collision", d3.forceCollide()
-            .radius(d => radiusScale(d.centrality) + 8))
-        .force("x", d3.forceX(width / 2).strength(0.04))
-        .force("y", d3.forceY(height / 2).strength(0.04));
+            .radius(d => radiusScale(d.centrality) + 35)
+            .strength(0.8))
+        .force("x", d3.forceX(width / 2).strength(0.03))
+        .force("y", d3.forceY(height / 2).strength(0.03));
 
     // Draw edges
     const link = svg.append("g")
