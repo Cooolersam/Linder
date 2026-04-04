@@ -644,6 +644,10 @@ function renderNetwork(data) {
         if (!event.active) simulation.alphaTarget(0.3).restart();
         event.subject.fx = event.subject.x;
         event.subject.fy = event.subject.y;
+        // Prevent text selection across the SVG during drag
+        svg.style("user-select", "none");
+        document.body.style.userSelect = "none";
+        document.body.style.webkitUserSelect = "none";
     }
     function dragged(event) {
         event.subject.fx = event.x;
@@ -653,6 +657,9 @@ function renderNetwork(data) {
         if (!event.active) simulation.alphaTarget(0);
         event.subject.fx = null;
         event.subject.fy = null;
+        svg.style("user-select", null);
+        document.body.style.userSelect = "";
+        document.body.style.webkitUserSelect = "";
     }
 
     // Build legend
