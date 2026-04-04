@@ -779,7 +779,7 @@ async function loadAndRenderHeatmap() {
         // Filter out Bengali (unreliable due to small sample sizes)
         crossData.languages = crossData.languages.filter(l => l.code !== "bn");
         crossData.pairs = crossData.pairs.filter(p => p.a !== "bn" && p.b !== "bn");
-        renderHeatmap("family");
+        renderHeatmap("avg");
 
         document.getElementById("heatmapSort").addEventListener("change", (e) => {
             renderHeatmap(e.target.value);
