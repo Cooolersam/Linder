@@ -286,6 +286,67 @@ td.score-cell {
     color: var(--text-secondary);
 }
 
+/* ===== Heatmap ===== */
+.heatmap-controls {
+    margin-bottom: 12px;
+}
+
+.heatmap-controls select {
+    font-family: var(--font);
+    font-size: 0.88rem;
+    padding: 6px 10px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--surface);
+}
+
+.heatmap-container {
+    position: relative;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    overflow-x: auto;
+    padding: 8px;
+}
+
+.heatmap-container canvas {
+    display: block;
+}
+
+.heatmap-tooltip {
+    display: none;
+    position: fixed;
+    background: rgba(26, 26, 26, 0.92);
+    color: #fff;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 0.82rem;
+    font-family: var(--font);
+    pointer-events: none;
+    z-index: 200;
+    white-space: nowrap;
+    box-shadow: var(--shadow-lg);
+}
+
+.heatmap-legend {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 12px;
+    font-size: 0.82rem;
+    color: var(--text-secondary);
+}
+
+.heatmap-gradient {
+    width: 200px;
+    height: 14px;
+    border-radius: 4px;
+    background: linear-gradient(to right, #f7fbff, #c6dbef, #6baed6, #2171b5, #08306b);
+    border: 1px solid var(--border);
+}
+
 /* ===== Footer ===== */
 footer {
     text-align: center;

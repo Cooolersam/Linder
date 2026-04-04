@@ -44,6 +44,7 @@ async function init() {
     renderFamilyChart();
     renderBandsChart();
     renderTable();
+    loadAndRenderHeatmap();
 }
 
 // ---- Overview Charts ----
@@ -402,6 +403,211 @@ function std(arr) {
     if (arr.length < 2) return 0;
     const m = mean(arr);
     return Math.sqrt(arr.reduce((s, v) => s + (v - m) ** 2, 0) / arr.length);
+}
+
+// ---- Heatmap ----
+
+let crossData = null;
+
+async function loadAndRenderHeatmap() {
+    try {
+        const resp = await fetch(`${DATA_BASE}/cross_matrix.json`);
+        crossData = await resp.json();
+        renderHeatmap("family");
+
+        document.getElementById("heatmapSort").addEventListener("change", (e) => {
+            renderHeatmap(e.target.value);
+        });
+
+        renderTopPairs();
+    } catch (e) {
+        console.warn("Cross-language matrix not available:", e);
+    }
+}
+
+function heatmapColor(value) {
+    // Blue sequential: white -> light blue -> deep blue
+    const stops = [
+        [0.0, 247, 251, 255],
+        [0.2, 198, 219, 239],
+        [0.4, 107, 174, 214],
+        [0.6, 33, 113, 181],
+        [1.0, 8, 48, 107],
+    ];
+    for (let i = 1; i < stops.length; i++) {
+        if (value <= stops[i][0]) {
+            const t = (value - stops[i-1][0]) / (stops[i][0] - stops[i-1][0]);
+            const r = Math.round(stops[i-1][1] + t * (stops[i][1] - stops[i-1][1]));
+            const g = Math.round(stops[i-1][2] + t * (stops[i][2] - stops[i-1][2]));
+            const b = Math.round(stops[i-1][3] + t * (stops[i][3] - stops[i-1][3]));
+            return `rgb(${r},${g},${b})`;
+        }
+    }
+    return "rgb(8,48,107)";
+}
+
+function renderHeatmap(sortMode) {
+    if (!crossData) return;
+
+    let langs = [...crossData.languages];
+
+    // Sort languages
+    if (sortMode === "family") {
+        langs.sort((a, b) => a.family.localeCompare(b.family) || a.name.localeCompare(b.name));
+    } else if (sortMode === "name") {
+        langs.sort((a, b) => a.name.localeCompare(b.name));
+    } else if (sortMode === "avg") {
+        // Sort by average similarity to all others
+        const avgMap = {};
+        for (const l of langs) {
+            let sum = 0, count = 0;
+            for (const l2 of langs) {
+                const key = `${l.code}-${l2.code}`;
+                if (crossData.matrix[key] !== undefined) {
+                    sum += crossData.matrix[key];
+                    count++;
+                }
+            }
+            avgMap[l.code] = count > 0 ? sum / count : 0;
+        }
+        langs.sort((a, b) => avgMap[b.code] - avgMap[a.code]);
+    }
+
+    const n = langs.length;
+    const cellSize = Math.max(14, Math.min(20, Math.floor(900 / n)));
+    const labelWidth = 100;
+    const labelHeight = 100;
+    const width = labelWidth + n * cellSize;
+    const height = labelHeight + n * cellSize;
+
+    const canvas = document.getElementById("heatmapCanvas");
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = width * dpr;
+    canvas.height = height * dpr;
+    canvas.style.width = width + "px";
+    canvas.style.height = height + "px";
+
+    const ctx = canvas.getContext("2d");
+    ctx.scale(dpr, dpr);
+    ctx.clearRect(0, 0, width, height);
+
+    // Draw cells
+    for (let i = 0; i < n; i++) {
+        for (let j = 0; j < n; j++) {
+            const key = `${langs[i].code}-${langs[j].code}`;
+            const val = crossData.matrix[key];
+            const x = labelWidth + j * cellSize;
+            const y = labelHeight + i * cellSize;
+
+            if (val !== undefined) {
+                ctx.fillStyle = heatmapColor(val);
+            } else {
+                ctx.fillStyle = "#f0f0f0";
+            }
+            ctx.fillRect(x, y, cellSize - 1, cellSize - 1);
+        }
+    }
+
+    // Draw row labels (left)
+    ctx.textAlign = "right";
+    ctx.textBaseline = "middle";
+    ctx.font = `${Math.min(11, cellSize - 2)}px -apple-system, sans-serif`;
+    for (let i = 0; i < n; i++) {
+        ctx.fillStyle = familyColor(langs[i].family);
+        ctx.fillText(langs[i].name, labelWidth - 6, labelHeight + i * cellSize + cellSize / 2);
+    }
+
+    // Draw column labels (top, rotated)
+    ctx.save();
+    ctx.textAlign = "left";
+    ctx.textBaseline = "middle";
+    for (let j = 0; j < n; j++) {
+        ctx.save();
+        ctx.translate(labelWidth + j * cellSize + cellSize / 2, labelHeight - 4);
+        ctx.rotate(-Math.PI / 2);
+        ctx.fillStyle = familyColor(langs[j].family);
+        ctx.fillText(langs[j].name, 0, 0);
+        ctx.restore();
+    }
+    ctx.restore();
+
+    // Tooltip on hover
+    const tooltip = document.getElementById("heatmapTooltip");
+    canvas.onmousemove = (e) => {
+        const rect = canvas.getBoundingClientRect();
+        const mx = e.clientX - rect.left;
+        const my = e.clientY - rect.top;
+        const col = Math.floor((mx - labelWidth) / cellSize);
+        const row = Math.floor((my - labelHeight) / cellSize);
+
+        if (row >= 0 && row < n && col >= 0 && col < n) {
+            const key = `${langs[row].code}-${langs[col].code}`;
+            const val = crossData.matrix[key];
+            if (val !== undefined) {
+                tooltip.style.display = "block";
+                tooltip.style.left = (e.clientX + 12) + "px";
+                tooltip.style.top = (e.clientY - 10) + "px";
+                tooltip.innerHTML = `<strong>${langs[row].name}</strong> ↔ <strong>${langs[col].name}</strong><br>Score: ${val.toFixed(4)}`;
+            } else {
+                tooltip.style.display = "none";
+            }
+        } else {
+            tooltip.style.display = "none";
+        }
+    };
+
+    canvas.onmouseleave = () => { tooltip.style.display = "none"; };
+}
+
+function renderTopPairs() {
+    if (!crossData || !crossData.pairs) return;
+
+    // Filter out pairs with very small overlap (< 500)
+    const filtered = crossData.pairs.filter(p => p.n >= 500);
+    const top = filtered.slice(0, 20);
+    const bottom = filtered.slice(-15);
+
+    const container = document.getElementById("heatmapTopPairs");
+    container.innerHTML = `
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+            <div>
+                <h3 style="margin-bottom: 8px;">Most Similar Language Pairs</h3>
+                <div class="table-wrap">
+                    <table>
+                        <thead><tr><th>Language A</th><th>Language B</th><th>Score</th><th>Pairs</th></tr></thead>
+                        <tbody>
+                            ${top.map(p => `
+                                <tr>
+                                    <td><strong>${p.a_name}</strong></td>
+                                    <td><strong>${p.b_name}</strong></td>
+                                    <td class="score-cell" style="color:${scoreColor(p.score)}">${p.score.toFixed(4)}</td>
+                                    <td class="score-cell">${p.n.toLocaleString()}</td>
+                                </tr>
+                            `).join("")}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div>
+                <h3 style="margin-bottom: 8px;">Least Similar Language Pairs</h3>
+                <div class="table-wrap">
+                    <table>
+                        <thead><tr><th>Language A</th><th>Language B</th><th>Score</th><th>Pairs</th></tr></thead>
+                        <tbody>
+                            ${bottom.reverse().map(p => `
+                                <tr>
+                                    <td><strong>${p.a_name}</strong></td>
+                                    <td><strong>${p.b_name}</strong></td>
+                                    <td class="score-cell" style="color:${scoreColor(p.score)}">${p.score.toFixed(4)}</td>
+                                    <td class="score-cell">${p.n.toLocaleString()}</td>
+                                </tr>
+                            `).join("")}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    `;
 }
 
 // ---- Go ----
