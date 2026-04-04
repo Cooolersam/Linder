@@ -286,6 +286,47 @@ td.score-cell {
     color: var(--text-secondary);
 }
 
+/* ===== Network Graph ===== */
+.network-container {
+    position: relative;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+}
+
+.network-container svg {
+    display: block;
+    width: 100%;
+    cursor: grab;
+}
+
+.network-container svg:active { cursor: grabbing; }
+
+.network-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 12px;
+    justify-content: center;
+}
+
+.network-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.78rem;
+    color: var(--text-secondary);
+}
+
+.network-legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
 /* ===== Heatmap ===== */
 .heatmap-controls {
     margin-bottom: 12px;

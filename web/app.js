@@ -45,6 +45,7 @@ async function init() {
     renderBandsChart();
     renderTable();
     loadAndRenderHeatmap();
+    loadAndRenderNetwork();
 }
 
 // ---- Overview Charts ----
@@ -403,6 +404,211 @@ function std(arr) {
     if (arr.length < 2) return 0;
     const m = mean(arr);
     return Math.sqrt(arr.reduce((s, v) => s + (v - m) ** 2, 0) / arr.length);
+}
+
+// ---- Network Graph ----
+
+async function loadAndRenderNetwork() {
+    try {
+        const resp = await fetch(`${DATA_BASE}/network.json`);
+        const data = await resp.json();
+        renderNetwork(data);
+    } catch (e) {
+        console.warn("Network data not available:", e);
+    }
+}
+
+function renderNetwork(data) {
+    const container = document.getElementById("networkContainer");
+    const width = container.clientWidth;
+    const height = Math.max(600, Math.min(800, width * 0.65));
+
+    const svg = d3.select("#networkSvg")
+        .attr("viewBox", [0, 0, width, height])
+        .attr("width", width)
+        .attr("height", height);
+
+    svg.selectAll("*").remove();
+
+    const tooltip = document.getElementById("networkTooltip");
+
+    // Scale node radius by centrality
+    const centralityExtent = d3.extent(data.nodes, d => d.centrality);
+    const radiusScale = d3.scaleSqrt()
+        .domain(centralityExtent)
+        .range([6, 22]);
+
+    // Scale edge width and opacity by score
+    const scoreExtent = d3.extent(data.edges, d => d.score);
+    const edgeWidthScale = d3.scaleLinear()
+        .domain(scoreExtent)
+        .range([1, 5]);
+    const edgeOpacityScale = d3.scaleLinear()
+        .domain(scoreExtent)
+        .range([0.15, 0.6]);
+
+    // Force simulation
+    const simulation = d3.forceSimulation(data.nodes)
+        .force("link", d3.forceLink(data.edges)
+            .id(d => d.id)
+            .distance(d => 180 * (1 - d.score))  // similar = closer
+            .strength(d => d.score * 0.8))
+        .force("charge", d3.forceManyBody()
+            .strength(-200)
+            .distanceMax(400))
+        .force("center", d3.forceCenter(width / 2, height / 2))
+        .force("collision", d3.forceCollide()
+            .radius(d => radiusScale(d.centrality) + 8))
+        .force("x", d3.forceX(width / 2).strength(0.04))
+        .force("y", d3.forceY(height / 2).strength(0.04));
+
+    // Draw edges
+    const link = svg.append("g")
+        .selectAll("line")
+        .data(data.edges)
+        .join("line")
+        .attr("stroke", "#b0b0b0")
+        .attr("stroke-width", d => edgeWidthScale(d.score))
+        .attr("stroke-opacity", d => edgeOpacityScale(d.score));
+
+    // Draw nodes
+    const node = svg.append("g")
+        .selectAll("g")
+        .data(data.nodes)
+        .join("g")
+        .call(d3.drag()
+            .on("start", dragstarted)
+            .on("drag", dragged)
+            .on("end", dragended));
+
+    // Node circles
+    node.append("circle")
+        .attr("r", d => radiusScale(d.centrality))
+        .attr("fill", d => familyColor(d.family))
+        .attr("stroke", "#fff")
+        .attr("stroke-width", 1.5)
+        .style("cursor", "pointer");
+
+    // Node labels
+    node.append("text")
+        .text(d => d.name)
+        .attr("dx", d => radiusScale(d.centrality) + 4)
+        .attr("dy", "0.35em")
+        .attr("font-size", d => {
+            const r = radiusScale(d.centrality);
+            return r > 14 ? "11px" : r > 10 ? "9.5px" : "8px";
+        })
+        .attr("font-family", "-apple-system, sans-serif")
+        .attr("fill", "#333")
+        .style("pointer-events", "none")
+        .style("user-select", "none");
+
+    // Hover interactions
+    node.on("mouseover", function(event, d) {
+        // Highlight connected edges
+        link.attr("stroke", l =>
+            (l.source.id === d.id || l.target.id === d.id) ? familyColor(d.family) : "#e0e0e0"
+        ).attr("stroke-opacity", l =>
+            (l.source.id === d.id || l.target.id === d.id) ? 0.8 : 0.08
+        ).attr("stroke-width", l =>
+            (l.source.id === d.id || l.target.id === d.id) ? edgeWidthScale(l.score) * 1.5 : edgeWidthScale(l.score)
+        );
+
+        // Dim unconnected nodes
+        const connected = new Set();
+        connected.add(d.id);
+        data.edges.forEach(e => {
+            const src = typeof e.source === "object" ? e.source.id : e.source;
+            const tgt = typeof e.target === "object" ? e.target.id : e.target;
+            if (src === d.id) connected.add(tgt);
+            if (tgt === d.id) connected.add(src);
+        });
+
+        node.select("circle").attr("opacity", n => connected.has(n.id) ? 1 : 0.2);
+        node.select("text").attr("opacity", n => connected.has(n.id) ? 1 : 0.15);
+
+        // Tooltip
+        const neighbors = data.edges
+            .filter(e => {
+                const src = typeof e.source === "object" ? e.source.id : e.source;
+                const tgt = typeof e.target === "object" ? e.target.id : e.target;
+                return src === d.id || tgt === d.id;
+            })
+            .map(e => {
+                const src = typeof e.source === "object" ? e.source.id : e.source;
+                const tgt = typeof e.target === "object" ? e.target.id : e.target;
+                const otherId = src === d.id ? tgt : src;
+                const other = data.nodes.find(n => n.id === otherId);
+                return { name: other ? other.name : otherId, score: e.score };
+            })
+            .sort((a, b) => b.score - a.score);
+
+        tooltip.style.display = "block";
+        tooltip.innerHTML = `
+            <strong>${d.name}</strong> (${d.family})<br>
+            <span style="opacity:0.7">Centrality: ${d.centrality.toFixed(3)}</span><br>
+            <span style="opacity:0.7">Connected to:</span><br>
+            ${neighbors.slice(0, 6).map(n =>
+                `&nbsp;&nbsp;${n.name}: ${n.score.toFixed(3)}`
+            ).join("<br>")}
+            ${neighbors.length > 6 ? `<br>&nbsp;&nbsp;...+${neighbors.length - 6} more` : ""}
+        `;
+    })
+    .on("mousemove", function(event) {
+        tooltip.style.left = (event.clientX + 14) + "px";
+        tooltip.style.top = (event.clientY - 14) + "px";
+    })
+    .on("mouseout", function() {
+        link.attr("stroke", "#b0b0b0")
+            .attr("stroke-opacity", d => edgeOpacityScale(d.score))
+            .attr("stroke-width", d => edgeWidthScale(d.score));
+        node.select("circle").attr("opacity", 1);
+        node.select("text").attr("opacity", 1);
+        tooltip.style.display = "none";
+    });
+
+    // Tick
+    simulation.on("tick", () => {
+        // Keep nodes within bounds
+        data.nodes.forEach(d => {
+            const r = radiusScale(d.centrality);
+            d.x = Math.max(r + 60, Math.min(width - r - 60, d.x));
+            d.y = Math.max(r + 10, Math.min(height - r - 10, d.y));
+        });
+
+        link
+            .attr("x1", d => d.source.x)
+            .attr("y1", d => d.source.y)
+            .attr("x2", d => d.target.x)
+            .attr("y2", d => d.target.y);
+
+        node.attr("transform", d => `translate(${d.x},${d.y})`);
+    });
+
+    function dragstarted(event) {
+        if (!event.active) simulation.alphaTarget(0.3).restart();
+        event.subject.fx = event.subject.x;
+        event.subject.fy = event.subject.y;
+    }
+    function dragged(event) {
+        event.subject.fx = event.x;
+        event.subject.fy = event.y;
+    }
+    function dragended(event) {
+        if (!event.active) simulation.alphaTarget(0);
+        event.subject.fx = null;
+        event.subject.fy = null;
+    }
+
+    // Build legend
+    const families = [...new Set(data.nodes.map(n => n.family))].sort();
+    const legend = document.getElementById("networkLegend");
+    legend.innerHTML = families.map(f =>
+        `<span class="network-legend-item">
+            <span class="network-legend-dot" style="background:${familyColor(f)}"></span>
+            ${f}
+        </span>`
+    ).join("");
 }
 
 // ---- Heatmap ----
