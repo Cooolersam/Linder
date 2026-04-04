@@ -9,4 +9,4 @@ __pycache__/
 results_*.csv
 results.csv
 charts/
-summary.json
+/summary.json
