@@ -38,16 +38,44 @@ function scoreColor(score) {
     return "var(--red)";
 }
 
+// ---- Tabs ----
+const renderedTabs = new Set();
+
+function initTabs() {
+    document.querySelectorAll(".tabs-bar .tab").forEach(btn => {
+        btn.addEventListener("click", () => {
+            document.querySelectorAll(".tabs-bar .tab").forEach(b => b.classList.remove("active"));
+            document.querySelectorAll(".tab-panel").forEach(p => p.classList.remove("active"));
+            btn.classList.add("active");
+            const panel = document.getElementById(`tab-${btn.dataset.tab}`);
+            panel.classList.add("active");
+            // Lazy-render charts on first tab visit (canvas must be visible)
+            renderTabContent(btn.dataset.tab);
+        });
+    });
+}
+
+function renderTabContent(tabId) {
+    if (renderedTabs.has(tabId)) return;
+    renderedTabs.add(tabId);
+    switch (tabId) {
+        case "heatmap": loadAndRenderHeatmap(); break;
+        case "rankings": renderMainChart(); break;
+        case "families": renderFamilyChart(); break;
+        case "distribution": renderBandsChart(); break;
+        case "data": renderTable(); break;
+    }
+}
+
 // ---- Init ----
 async function init() {
     const resp = await fetch(`${DATA_BASE}/summary.json`);
     summaryData = await resp.json();
     document.getElementById("lang-count").textContent = summaryData.length;
-    renderMainChart();
-    renderFamilyChart();
-    renderBandsChart();
-    renderTable();
-    loadAndRenderHeatmap();
+    initTabs();
+    // Render the default active tab (heatmap)
+    renderTabContent("heatmap");
+    // Network is always visible, render immediately
     loadAndRenderNetwork();
 }
 
