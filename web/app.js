@@ -507,40 +507,92 @@ function renderNetwork(data) {
         .style("pointer-events", "none")
         .style("user-select", "none");
 
-    // Hover interactions
-    node.on("mouseover", function(event, d) {
-        // Highlight connected edges
-        link.attr("stroke", l =>
-            (l.source.id === d.id || l.target.id === d.id) ? familyColor(d.family) : "#e8e8e8"
-        ).attr("stroke-opacity", l =>
-            (l.source.id === d.id || l.target.id === d.id) ? 0.85 : 0.15
-        ).attr("stroke-width", l =>
-            (l.source.id === d.id || l.target.id === d.id) ? edgeWidthScale(l.score) * 1.4 : edgeWidthScale(l.score) * 0.5
-        );
+    // ---- Selection + Hover logic ----
+    const selected = new Set();  // locked/clicked node IDs
 
-        // Dim unconnected nodes
-        const connected = new Set();
-        connected.add(d.id);
+    function edgeId(e) {
+        const s = typeof e.source === "object" ? e.source.id : e.source;
+        const t = typeof e.target === "object" ? e.target.id : e.target;
+        return { src: s, tgt: t };
+    }
+
+    function getConnected(nodeIds) {
+        // All nodes connected to any node in the set (plus the set itself)
+        const connected = new Set(nodeIds);
         data.edges.forEach(e => {
-            const src = typeof e.source === "object" ? e.source.id : e.source;
-            const tgt = typeof e.target === "object" ? e.target.id : e.target;
-            if (src === d.id) connected.add(tgt);
-            if (tgt === d.id) connected.add(src);
+            const { src, tgt } = edgeId(e);
+            if (nodeIds.has(src)) connected.add(tgt);
+            if (nodeIds.has(tgt)) connected.add(src);
         });
+        return connected;
+    }
 
+    function isHighlightedEdge(e, nodeIds) {
+        const { src, tgt } = edgeId(e);
+        return nodeIds.has(src) || nodeIds.has(tgt);
+    }
+
+    function edgeHighlightColor(e, nodeIds) {
+        const { src, tgt } = edgeId(e);
+        // Color by whichever selected node this edge touches
+        for (const id of nodeIds) {
+            if (src === id || tgt === id) {
+                const n = data.nodes.find(x => x.id === id);
+                if (n) return familyColor(n.family);
+            }
+        }
+        return "#c0c0c0";
+    }
+
+    function applyHighlight(activeIds) {
+        if (activeIds.size === 0) {
+            // Reset everything
+            link.attr("stroke", "#c0c0c0")
+                .attr("stroke-opacity", 0.45)
+                .attr("stroke-width", d => edgeWidthScale(d.score));
+            node.select("circle").attr("opacity", 1);
+            node.select("text").attr("opacity", 1);
+            return;
+        }
+        const connected = getConnected(activeIds);
+        link.attr("stroke", l => isHighlightedEdge(l, activeIds) ? edgeHighlightColor(l, activeIds) : "#e8e8e8")
+            .attr("stroke-opacity", l => isHighlightedEdge(l, activeIds) ? 0.85 : 0.15)
+            .attr("stroke-width", l => isHighlightedEdge(l, activeIds) ? edgeWidthScale(l.score) * 1.4 : edgeWidthScale(l.score) * 0.5);
         node.select("circle").attr("opacity", n => connected.has(n.id) ? 1 : 0.2);
         node.select("text").attr("opacity", n => connected.has(n.id) ? 1 : 0.15);
+    }
+
+    // Click node: toggle selection
+    node.on("click", function(event, d) {
+        event.stopPropagation();
+        if (selected.has(d.id)) {
+            selected.delete(d.id);
+        } else {
+            selected.add(d.id);
+        }
+        applyHighlight(selected);
+        tooltip.style.display = "none";
+    });
+
+    // Click blank SVG space: clear all selections
+    svg.on("click", function(event) {
+        if (event.target === svg.node() || event.target.tagName === "svg") {
+            selected.clear();
+            applyHighlight(selected);
+            tooltip.style.display = "none";
+        }
+    });
+
+    // Hover: only activates when nothing is selected
+    node.on("mouseover", function(event, d) {
+        if (selected.size > 0) return;  // locked selection takes priority
+        applyHighlight(new Set([d.id]));
 
         // Tooltip
         const neighbors = data.edges
-            .filter(e => {
-                const src = typeof e.source === "object" ? e.source.id : e.source;
-                const tgt = typeof e.target === "object" ? e.target.id : e.target;
-                return src === d.id || tgt === d.id;
-            })
+            .filter(e => { const {src, tgt} = edgeId(e); return src === d.id || tgt === d.id; })
             .map(e => {
-                const src = typeof e.source === "object" ? e.source.id : e.source;
-                const tgt = typeof e.target === "object" ? e.target.id : e.target;
+                const {src, tgt} = edgeId(e);
                 const otherId = src === d.id ? tgt : src;
                 const other = data.nodes.find(n => n.id === otherId);
                 return { name: other ? other.name : otherId, score: e.score };
@@ -563,11 +615,12 @@ function renderNetwork(data) {
         tooltip.style.top = (event.clientY - 14) + "px";
     })
     .on("mouseout", function() {
-        link.attr("stroke", "#c0c0c0")
-            .attr("stroke-opacity", 0.45)
-            .attr("stroke-width", d => edgeWidthScale(d.score));
-        node.select("circle").attr("opacity", 1);
-        node.select("text").attr("opacity", 1);
+        if (selected.size > 0) {
+            // Keep the locked selection visible
+            tooltip.style.display = "none";
+            return;
+        }
+        applyHighlight(selected);  // empty set = reset
         tooltip.style.display = "none";
     });
 
