@@ -23,6 +23,9 @@ const FAMILY_COLORS = {
     "Austronesian":   "#00897B",
     "Tai-Kadai":      "#F57F17",
     "Austroasiatic":  "#00796B",
+    "Celtic":         "#1B5E20",
+    "Italic":         "#880E4F",
+    "Niger-Congo":    "#BF360C",
 };
 
 function familyColor(family) {
@@ -449,21 +452,48 @@ function renderNetwork(data) {
         .domain(scoreExtent)
         .range([0.5, 7]);
 
-    // Force simulation — spread nodes out for readability
+    // Custom force: extra repulsion between different families
+    function familyRepulsion(alpha) {
+        const strength = 12;
+        for (let i = 0; i < data.nodes.length; i++) {
+            for (let j = i + 1; j < data.nodes.length; j++) {
+                const a = data.nodes[i], b = data.nodes[j];
+                if (a.family === b.family) continue;  // same family = no extra push
+                const dx = a.x - b.x, dy = a.y - b.y;
+                const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+                if (dist > 300) continue;  // only push nearby cross-family nodes
+                const force = strength * alpha / dist;
+                const fx = dx / dist * force, fy = dy / dist * force;
+                a.vx += fx; a.vy += fy;
+                b.vx -= fx; b.vy -= fy;
+            }
+        }
+    }
+
+    // Force simulation — spread nodes out, cluster by family
     const simulation = d3.forceSimulation(data.nodes)
         .force("link", d3.forceLink(data.edges)
             .id(d => d.id)
-            .distance(d => 250 * (1 - d.score) + 60)  // wider base distance
+            .distance(d => {
+                const src = typeof d.source === "object" ? d.source : data.nodes.find(n => n.id === d.source);
+                const tgt = typeof d.target === "object" ? d.target : data.nodes.find(n => n.id === d.target);
+                // Same family = pull tighter, different family = longer links
+                const sameFamily = src && tgt && src.family === tgt.family;
+                return sameFamily
+                    ? 150 * (1 - d.score) + 30
+                    : 280 * (1 - d.score) + 80;
+            })
             .strength(d => d.score * 0.5))
         .force("charge", d3.forceManyBody()
-            .strength(-750)
+            .strength(-800)
             .distanceMax(600))
         .force("center", d3.forceCenter(width / 2, height / 2))
         .force("collision", d3.forceCollide()
             .radius(d => radiusScale(d.centrality) + 35)
             .strength(0.8))
-        .force("x", d3.forceX(width / 2).strength(0.03))
-        .force("y", d3.forceY(height / 2).strength(0.03));
+        .force("familyRepulsion", familyRepulsion)
+        .force("x", d3.forceX(width / 2).strength(0.025))
+        .force("y", d3.forceY(height / 2).strength(0.025));
 
     // Draw edges — width shows connection strength
     const link = svg.append("g")
@@ -677,14 +707,17 @@ function renderNetwork(data) {
         familyLabels.each(function(family) {
             const members = data.nodes.filter(n => n.family === family);
             if (members.length === 0) return;
+
+            // Find the topmost node in the cluster to place label above it
             const cx = d3.mean(members, m => m.x);
-            const cy = d3.mean(members, m => m.y) - 35;  // float above cluster
+            const topY = d3.min(members, m => m.y);
+            const labelY = topY - 30;  // above the highest node
 
             const g = d3.select(this);
             const textEl = g.select("text");
-            // Clamp label position within viewBox
-            const clampedX = Math.max(60, Math.min(width - 60, cx));
-            const clampedY = Math.max(20, Math.min(height - 20, cy));
+            // Clamp within viewBox
+            const clampedX = Math.max(70, Math.min(width - 70, cx));
+            const clampedY = Math.max(16, Math.min(height - 16, labelY));
             textEl.attr("x", clampedX).attr("y", clampedY);
 
             // Size the background rect to fit text with generous padding

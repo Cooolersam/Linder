@@ -103,6 +103,17 @@ LANGUAGES = {
     "th": {"name": "Thai",        "family": "Tai-Kadai",  "romanize": "unidecode"},
     # ---- Austroasiatic ----
     "vi": {"name": "Vietnamese",  "family": "Austroasiatic", "romanize": None},
+    # ---- Celtic ----
+    "cy": {"name": "Welsh",       "family": "Celtic",     "romanize": None},
+    "ga": {"name": "Irish",       "family": "Celtic",     "romanize": None},
+    # ---- Iranian (Kurdish) ----
+    "ku": {"name": "Kurdish",     "family": "Indo-Iranian", "romanize": None},
+    # ---- Italic (Latin) ----
+    "la": {"name": "Latin",       "family": "Italic",     "romanize": None},
+    # ---- Niger-Congo (Swahili) ----
+    "sw": {"name": "Swahili",     "family": "Niger-Congo", "romanize": None},
+    # ---- Indo-Iranian (Urdu) ----
+    "ur": {"name": "Urdu",        "family": "Indo-Iranian", "romanize": "unidecode"},
 }
 
 
