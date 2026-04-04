@@ -371,6 +371,30 @@ td.score-cell {
 
 .network-container svg:active { cursor: grabbing; }
 
+.network-reset-btn {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    font-family: var(--font);
+    font-size: 0.82rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 6px 14px;
+    cursor: pointer;
+    transition: all 0.15s;
+    z-index: 10;
+    box-shadow: var(--shadow);
+}
+
+.network-reset-btn:hover {
+    color: var(--accent);
+    border-color: var(--accent);
+    background: #eef4ff;
+}
+
 .network-legend {
     display: flex;
     flex-wrap: wrap;

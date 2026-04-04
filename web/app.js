@@ -654,7 +654,47 @@ function renderNetwork(data) {
         node.select("text").attr("opacity", n => connected.has(n.id) ? 1 : 0.15);
     }
 
-    // Click node: toggle selection
+    // Build tooltip HTML for a single node
+    function buildTooltip(d) {
+        const neighbors = data.edges
+            .filter(e => { const {src, tgt} = edgeId(e); return src === d.id || tgt === d.id; })
+            .map(e => {
+                const {src, tgt} = edgeId(e);
+                const otherId = src === d.id ? tgt : src;
+                const other = data.nodes.find(n => n.id === otherId);
+                return { name: other ? other.name : otherId, score: e.score };
+            })
+            .sort((a, b) => b.score - a.score);
+
+        return `<strong>${d.name}</strong> (${d.family})<br>
+            <span style="opacity:0.7">Centrality: ${d.centrality.toFixed(3)}</span><br>
+            <span style="opacity:0.7">Connected to:</span><br>
+            ${neighbors.slice(0, 6).map(n =>
+                `&nbsp;&nbsp;${n.name}: ${n.score.toFixed(3)}`
+            ).join("<br>")}
+            ${neighbors.length > 6 ? `<br>&nbsp;&nbsp;...+${neighbors.length - 6} more` : ""}`;
+    }
+
+    // Show persistent tooltip for all selected nodes
+    function showSelectionTooltip() {
+        if (selected.size === 0) {
+            tooltip.style.display = "none";
+            return;
+        }
+        const selectedNodes = data.nodes.filter(n => selected.has(n.id));
+        tooltip.innerHTML = selectedNodes.map(d => buildTooltip(d)).join("<hr style='border:none;border-top:1px solid rgba(255,255,255,0.2);margin:6px 0'>");
+        tooltip.style.display = "block";
+        // Position near the centroid of selected nodes
+        const svgRect = svg.node().getBoundingClientRect();
+        const avgX = d3.mean(selectedNodes, d => d.x);
+        const avgY = d3.mean(selectedNodes, d => d.y);
+        const scaleX = svgRect.width / width;
+        const scaleY = svgRect.height / height;
+        tooltip.style.left = (svgRect.left + avgX * scaleX + 20) + "px";
+        tooltip.style.top = (svgRect.top + avgY * scaleY - 20) + "px";
+    }
+
+    // Click node: toggle selection, show persistent tooltip
     node.on("click", function(event, d) {
         event.stopPropagation();
         if (selected.has(d.id)) {
@@ -663,7 +703,7 @@ function renderNetwork(data) {
             selected.add(d.id);
         }
         applyHighlight(selected);
-        tooltip.style.display = "none";
+        showSelectionTooltip();
     });
 
     // Click blank SVG space: clear all selections
@@ -677,42 +717,19 @@ function renderNetwork(data) {
 
     // Hover: only activates when nothing is selected
     node.on("mouseover", function(event, d) {
-        if (selected.size > 0) return;  // locked selection takes priority
+        if (selected.size > 0) return;
         applyHighlight(new Set([d.id]));
-
-        // Tooltip
-        const neighbors = data.edges
-            .filter(e => { const {src, tgt} = edgeId(e); return src === d.id || tgt === d.id; })
-            .map(e => {
-                const {src, tgt} = edgeId(e);
-                const otherId = src === d.id ? tgt : src;
-                const other = data.nodes.find(n => n.id === otherId);
-                return { name: other ? other.name : otherId, score: e.score };
-            })
-            .sort((a, b) => b.score - a.score);
-
         tooltip.style.display = "block";
-        tooltip.innerHTML = `
-            <strong>${d.name}</strong> (${d.family})<br>
-            <span style="opacity:0.7">Centrality: ${d.centrality.toFixed(3)}</span><br>
-            <span style="opacity:0.7">Connected to:</span><br>
-            ${neighbors.slice(0, 6).map(n =>
-                `&nbsp;&nbsp;${n.name}: ${n.score.toFixed(3)}`
-            ).join("<br>")}
-            ${neighbors.length > 6 ? `<br>&nbsp;&nbsp;...+${neighbors.length - 6} more` : ""}
-        `;
+        tooltip.innerHTML = buildTooltip(d);
     })
     .on("mousemove", function(event) {
+        if (selected.size > 0) return;
         tooltip.style.left = (event.clientX + 14) + "px";
         tooltip.style.top = (event.clientY - 14) + "px";
     })
     .on("mouseout", function() {
-        if (selected.size > 0) {
-            // Keep the locked selection visible
-            tooltip.style.display = "none";
-            return;
-        }
-        applyHighlight(selected);  // empty set = reset
+        if (selected.size > 0) return;
+        applyHighlight(selected);
         tooltip.style.display = "none";
     });
 
@@ -816,6 +833,15 @@ function renderNetwork(data) {
         document.body.style.userSelect = "";
         document.body.style.webkitUserSelect = "";
     }
+
+    // Reset button — clear selections, unpin all nodes, reheat simulation
+    document.getElementById("networkResetBtn").onclick = () => {
+        selected.clear();
+        applyHighlight(selected);
+        tooltip.style.display = "none";
+        data.nodes.forEach(d => { d.fx = null; d.fy = null; });
+        simulation.alpha(1).restart();
+    };
 
     // Build legend
     const families = [...new Set(data.nodes.map(n => n.family))].sort();
