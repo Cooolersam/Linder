@@ -5,34 +5,48 @@ let summaryData = [];
 let currentSort = { key: "avg", desc: true };
 
 // ---- Family colors (match Python) ----
+// Geographic gradient: West → East, warm → cool
+// W Europe (reds/oranges) → E Europe (purples) → Middle East/C Asia (greens)
+// → S Asia (teals) → E Asia (blues) → SE Asia (cyans) → Pacific (aqua)
+// Africa (earthy browns/ambers)
 const FAMILY_COLORS = {
-    "Germanic":       "#2196F3",
-    "Romance":        "#E91E63",
+    // -- W/NW Europe (warm reds, oranges) --
+    "Celtic":         "#D32F2F",
+    "Germanic":       "#E64A19",
+    "Romance":        "#F57C00",
+    "Italic":         "#FF8F00",
+    "Basque":         "#C62828",
+    // -- S/SE Europe (rose, magenta) --
+    "Albanian":       "#AD1457",
+    "Hellenic":       "#C2185B",
+    // -- E/NE Europe (purples) --
     "Slavic":         "#7B1FA2",
-    "Baltic":         "#4527A0",
-    "Uralic":         "#00838F",
-    "Turkic":         "#EF6C00",
-    "Hellenic":       "#2E7D32",
-    "Albanian":       "#558B2F",
-    "Semitic":        "#C62828",
-    "Indo-Iranian":   "#D84315",
-    "Dravidian":      "#5D4037",
-    "Sino-Tibetan":   "#455A64",
-    "Japonic":        "#AD1457",
-    "Koreanic":       "#283593",
-    "Austronesian":   "#00897B",
-    "Tai-Kadai":      "#F57F17",
-    "Austroasiatic":  "#00796B",
-    "Celtic":         "#1B5E20",
-    "Italic":         "#880E4F",
-    "Niger-Congo":    "#BF360C",
-    "Kartvelian":     "#33691E",
-    "Armenian":       "#4E342E",
-    "Constructed":    "#37474F",
-    "Mongolic":       "#827717",
-    "Chadic":         "#E65100",
-    "Cushitic":       "#FF6D00",
-    "Basque":         "#006064",
+    "Baltic":         "#6A1B9A",
+    "Uralic":         "#4A148C",
+    // -- Middle East / W Asia (deep greens) --
+    "Semitic":        "#1B5E20",
+    "Armenian":       "#2E7D32",
+    "Kartvelian":     "#388E3C",
+    // -- Central Asia (olive, lime) --
+    "Turkic":         "#689F38",
+    "Mongolic":       "#9E9D24",
+    // -- S/SW Asia (teal, green-blue) --
+    "Indo-Iranian":   "#00796B",
+    "Dravidian":      "#00695C",
+    // -- E Asia (blues) --
+    "Sino-Tibetan":   "#1565C0",
+    "Japonic":        "#0D47A1",
+    "Koreanic":       "#1A237E",
+    // -- SE Asia / Pacific (cyan, aqua) --
+    "Tai-Kadai":      "#00838F",
+    "Austroasiatic":  "#0097A7",
+    "Austronesian":   "#00ACC1",
+    // -- Africa (earthy amber, brown) --
+    "Niger-Congo":    "#8D6E63",
+    "Chadic":         "#A1887F",
+    "Cushitic":       "#795548",
+    // -- Other --
+    "Constructed":    "#78909C",
 };
 
 function familyColor(family) {
@@ -761,24 +775,22 @@ function renderNetwork(data) {
     node.on("click", function(event, d) {
         event.stopPropagation();
         highlightMode = "node";
-        if (selected.has(d.id)) {
-            selected.delete(d.id);
-        } else {
-            selected.add(d.id);
-        }
+        selected.clear();
+        selected.add(d.id);
         applyHighlight(selected);
-        showSelectionTooltip();
+        tooltip.style.display = "none";
+        openSidebar(d, data);
     });
 
     // Click blank space: clear all selections
     // Use mousedown on SVG to catch clicks that aren't on nodes/labels
     svg.on("click", function(event) {
-        // Only clear if clicking the SVG background itself (not a node or family label)
         const tag = event.target.tagName;
         if (tag === "svg" || tag === "rect" && !event.target.closest(".family-labels")) {
             selected.clear();
             applyHighlight(selected);
             tooltip.style.display = "none";
+            closeSidebar();
         }
     });
 
@@ -952,6 +964,182 @@ function renderNetwork(data) {
             ${f}
         </span>`
     ).join("");
+}
+
+// ---- Network Sidebar ----
+
+function closeSidebar() {
+    document.getElementById("networkSidebar").classList.add("hidden");
+}
+
+function openSidebar(langNode, graphData) {
+    const sidebar = document.getElementById("networkSidebar");
+    const content = document.getElementById("sidebarContent");
+    sidebar.classList.remove("hidden");
+
+    document.getElementById("sidebarClose").onclick = () => closeSidebar();
+
+    const code = langNode.id;
+    const name = langNode.name;
+    const family = langNode.family;
+    const color = familyColor(family);
+
+    // Find this language in summary data
+    const summaryEntry = summaryData.find(d => d.code === code);
+    const avg = summaryEntry ? summaryEntry.avg : langNode.centrality;
+    const highPct = summaryEntry ? summaryEntry.high_pct : 0;
+    const n = summaryEntry ? summaryEntry.n : 0;
+
+    // Get cross-matrix data for this language
+    const matrix = crossData ? crossData.matrix : {};
+
+    // Get neighbors from graph edges
+    const neighbors = graphData.edges
+        .filter(e => {
+            const s = typeof e.source === "object" ? e.source.id : e.source;
+            const t = typeof e.target === "object" ? e.target.id : e.target;
+            return s === code || t === code;
+        })
+        .map(e => {
+            const s = typeof e.source === "object" ? e.source.id : e.source;
+            const t = typeof e.target === "object" ? e.target.id : e.target;
+            const otherId = s === code ? t : s;
+            const other = graphData.nodes.find(n => n.id === otherId);
+            return { id: otherId, name: other?.name || otherId, family: other?.family || "", score: e.score };
+        })
+        .sort((a, b) => b.score - a.score);
+
+    // Build family comparison: average score of this language against each family
+    const familyScores = {};
+    const uniqueFamilies = [...new Set(graphData.nodes.map(n => n.family))].sort();
+    for (const fam of uniqueFamilies) {
+        const famMembers = graphData.nodes.filter(n => n.family === fam && n.id !== code);
+        let total = 0, count = 0;
+        for (const m of famMembers) {
+            const key = `${code}-${m.id}`;
+            const val = matrix[key];
+            if (val !== undefined) { total += val; count++; }
+        }
+        if (count > 0) familyScores[fam] = total / count;
+    }
+    const sortedFamilies = Object.entries(familyScores).sort((a, b) => b[1] - a[1]);
+
+    // All languages sorted by similarity to this one
+    const allLangScores = graphData.nodes
+        .filter(n => n.id !== code)
+        .map(n => {
+            const key = `${code}-${n.id}`;
+            return { id: n.id, name: n.name, family: n.family, score: matrix[key] || 0 };
+        })
+        .sort((a, b) => b.score - a.score);
+
+    // Build compare dropdown options
+    const langOptionsHtml = allLangScores.map(l =>
+        `<option value="${l.id}">${l.name} (${l.score.toFixed(3)})</option>`
+    ).join("");
+
+    const familyOptionsHtml = sortedFamilies.map(([fam, score]) =>
+        `<option value="${fam}">${fam} (${score.toFixed(3)})</option>`
+    ).join("");
+
+    content.innerHTML = `
+        <div class="sidebar-header">
+            <div class="sidebar-lang-name">${name}</div>
+            <span class="sidebar-lang-family" style="background:${color}">${family}</span>
+        </div>
+        <div class="sidebar-score-row">
+            <div class="sidebar-score-card">
+                <div class="sidebar-score-value" style="color:${scoreColor(avg)}">${avg.toFixed(3)}</div>
+                <div class="sidebar-score-label">vs English</div>
+            </div>
+            <div class="sidebar-score-card">
+                <div class="sidebar-score-value">${langNode.centrality.toFixed(3)}</div>
+                <div class="sidebar-score-label">Centrality</div>
+            </div>
+            <div class="sidebar-score-card">
+                <div class="sidebar-score-value" style="color:var(--green)">${highPct.toFixed(0)}%</div>
+                <div class="sidebar-score-label">High sim</div>
+            </div>
+        </div>
+
+        <div class="sidebar-section">
+            <h4>Compare to Language</h4>
+            <select class="sidebar-compare-select" id="sidebarLangCompare">
+                ${langOptionsHtml}
+            </select>
+            <div class="sidebar-compare-result" id="sidebarLangResult"></div>
+        </div>
+
+        <div class="sidebar-section">
+            <h4>Compare to Family</h4>
+            <select class="sidebar-compare-select" id="sidebarFamCompare">
+                ${familyOptionsHtml}
+            </select>
+            <div class="sidebar-compare-result" id="sidebarFamResult"></div>
+        </div>
+
+        <div class="sidebar-section">
+            <h4>Similarity by Family</h4>
+            <div class="sidebar-family-list" id="sidebarFamilyList"></div>
+        </div>
+
+        <div class="sidebar-section">
+            <h4>Top Neighbors</h4>
+            <div class="sidebar-family-list" id="sidebarNeighborList"></div>
+        </div>
+    `;
+
+    // Language compare dropdown
+    function updateLangCompare() {
+        const targetId = document.getElementById("sidebarLangCompare").value;
+        const key = `${code}-${targetId}`;
+        const score = matrix[key];
+        const target = graphData.nodes.find(n => n.id === targetId);
+        if (score !== undefined && target) {
+            const c = scoreColor(score);
+            document.getElementById("sidebarLangResult").innerHTML =
+                `<div class="sidebar-compare-score" style="color:${c}">${score.toFixed(4)}</div>
+                 <div class="sidebar-compare-label">${name} ↔ ${target.name}</div>`;
+        }
+    }
+    document.getElementById("sidebarLangCompare").addEventListener("change", updateLangCompare);
+    updateLangCompare();
+
+    // Family compare dropdown
+    function updateFamCompare() {
+        const fam = document.getElementById("sidebarFamCompare").value;
+        const score = familyScores[fam];
+        if (score !== undefined) {
+            const c = scoreColor(score);
+            document.getElementById("sidebarFamResult").innerHTML =
+                `<div class="sidebar-compare-score" style="color:${c}">${score.toFixed(4)}</div>
+                 <div class="sidebar-compare-label">${name} avg vs ${fam}</div>`;
+        }
+    }
+    document.getElementById("sidebarFamCompare").addEventListener("change", updateFamCompare);
+    updateFamCompare();
+
+    // Family list bars
+    const maxFamScore = sortedFamilies.length ? sortedFamilies[0][1] : 1;
+    document.getElementById("sidebarFamilyList").innerHTML = sortedFamilies.slice(0, 12).map(([fam, score]) => {
+        const pct = (score / maxFamScore) * 100;
+        const c = familyColor(fam);
+        return `<div class="sidebar-family-row">
+            <span style="color:${c};font-weight:500;min-width:90px">${fam}</span>
+            <div class="sidebar-family-bar"><div class="sidebar-family-bar-fill" style="width:${pct}%;background:${c}"></div></div>
+            <span style="font-family:var(--mono);font-size:0.78rem">${score.toFixed(3)}</span>
+        </div>`;
+    }).join("");
+
+    // Neighbor list
+    document.getElementById("sidebarNeighborList").innerHTML = neighbors.slice(0, 8).map(nb => {
+        const c = familyColor(nb.family);
+        return `<div class="sidebar-family-row">
+            <span style="min-width:100px"><span style="color:${c}">●</span> ${nb.name}</span>
+            <div class="sidebar-family-bar"><div class="sidebar-family-bar-fill" style="width:${(nb.score / 0.8) * 100}%;background:${c}"></div></div>
+            <span style="font-family:var(--mono);font-size:0.78rem">${nb.score.toFixed(3)}</span>
+        </div>`;
+    }).join("");
 }
 
 // ---- Compare Tool ----
