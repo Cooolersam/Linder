@@ -664,6 +664,68 @@ td.score-cell {
     border: 1px solid var(--border);
 }
 
+/* ===== Explainer ===== */
+.explainer h2 {
+    margin-top: 28px;
+    margin-bottom: 8px;
+    font-size: 1.15rem;
+}
+
+.explainer h2:first-child { margin-top: 0; }
+
+.explainer p {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    line-height: 1.7;
+    margin-bottom: 12px;
+}
+
+.explainer ul, .explainer ol {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    line-height: 1.7;
+    margin: 0 0 12px 20px;
+}
+
+.explainer li { margin-bottom: 4px; }
+
+.explainer code {
+    font-family: var(--mono);
+    font-size: 0.82rem;
+    background: #f0f4f8;
+    padding: 1px 5px;
+    border-radius: 3px;
+}
+
+.explainer-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+    margin-bottom: 16px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+}
+
+.explainer-table th {
+    background: #f6f6f6;
+    text-align: left;
+    padding: 8px 12px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    color: var(--text-secondary);
+}
+
+.explainer-table td {
+    padding: 8px 12px;
+    border-top: 1px solid #f0f0f0;
+    color: var(--text-secondary);
+    line-height: 1.5;
+}
+
 /* ===== Compare Tool ===== */
 .compare-tool {
     display: flex;

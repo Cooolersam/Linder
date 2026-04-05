@@ -243,27 +243,112 @@
     <main id="view-method" class="view-page hidden">
       <section class="view-header">
         <button class="back-btn" onclick="showOverview()">&#8592; Back</button>
-        <h1>How It Works</h1>
+        <h1>Methodology</h1>
       </section>
-      <section class="section">
-        <div class="method-grid">
-          <div class="method-card">
-            <h3>Data Source</h3>
-            <p>Translation pairs from the MUSE bilingual dictionaries (Meta Research) and FreeDict. Up to 100k+ pairs per language.</p>
-          </div>
-          <div class="method-card">
-            <h3>Romanization</h3>
-            <p>Non-Latin scripts are romanized first: Pinyin for Chinese, IAST for Hindi/Bengali, Hepburn for Japanese, and Unidecode for Cyrillic, Arabic, Greek, etc.</p>
-          </div>
-          <div class="method-card">
-            <h3>Composite Score</h3>
-            <p>Weighted blend of 7 metrics: Levenshtein (30%), Jaro-Winkler (25%), Metaphone (15%), Soundex (10%), bigram (10%), trigram (5%), and length similarity (5%).</p>
-          </div>
-          <div class="method-card">
-            <h3>Cross-Language Comparison</h3>
-            <p>For non-English pairs, English is used as a pivot. Both translations are romanized and compared — measuring phonetic similarity of words for the same concept across any two languages.</p>
-          </div>
-        </div>
+      <section class="section explainer">
+
+        <h2>Overview</h2>
+        <p>Linder measures how alike words for the same concept look and sound across languages. It compares 96 languages across 27 language families by scoring English-foreign translation pairs on orthographic and phonetic similarity, then extends this to cross-language comparison using English as a pivot.</p>
+
+        <h2>Data Sources</h2>
+        <p>Translation pairs come from three open datasets:</p>
+        <ul>
+          <li><strong>MUSE</strong> (Meta Research) — bilingual dictionaries for 44 languages, up to 100k+ pairs each. Space/tab-separated word pairs. CC-BY-NC license.</li>
+          <li><strong>PanLex</strong> (Long Now Foundation) — lexical translations for 24 additional languages, extracted via shared meaning IDs from the HuggingFace <code>cointegrated/panlex-meanings</code> dataset. CC0 license.</li>
+          <li><strong>FreeDict</strong> — dictd-format bilingual dictionaries for 6 languages (Welsh, Irish, Kurdish, Latin, Swahili, Urdu). GPL license.</li>
+          <li><strong>Wiktionary</strong> (kaikki.org) — English Wiktionary JSONL dump, parsed for translation fields. 22 languages extracted. CC-BY-SA license.</li>
+          <li><strong>Apertium</strong> — open-source MT bilingual dictionaries in XML format. Used to supplement Basque and Maltese. GPL license.</li>
+          <li><strong>sinhala-para-dict</strong> — open-source English-Sinhala word pairs from GitHub. Used to supplement Sinhala (2k to 314k pairs).</li>
+        </ul>
+        <p>Multi-word phrases are filtered out. Only single-word to single-word pairs are used. Pairs are deduplicated per language.</p>
+
+        <h2>Romanization</h2>
+        <p>Non-Latin scripts are converted to Latin characters before scoring. Each script uses a dedicated method:</p>
+        <ul>
+          <li><strong>Chinese</strong> — Pinyin via <code>pypinyin</code>. Tone marks stripped.</li>
+          <li><strong>Japanese</strong> — Hepburn romanization via <code>pykakasi</code>.</li>
+          <li><strong>Hindi, Bengali, Nepali, Marathi</strong> — IAST transliteration via <code>indic-transliteration</code>, then diacritical marks removed with Unicode NFD normalization.</li>
+          <li><strong>Russian, Ukrainian, Bulgarian, Greek, Arabic, Hebrew, Korean, Georgian, Armenian, Thai, Khmer, Lao, Burmese, Mongolian, and others</strong> — <code>unidecode</code>, which provides approximate ASCII transliteration for any Unicode text.</li>
+          <li><strong>Latin-script languages</strong> (French, German, Turkish, etc.) — diacritical marks stripped (e.g., "uber" from "uber") for fairer comparison.</li>
+        </ul>
+
+        <h2>Scoring Metrics</h2>
+        <p>Each word pair is scored on 7 metrics, then combined into a weighted composite (0 to 1, where 1 is identical):</p>
+
+        <table class="explainer-table">
+          <thead>
+            <tr><th>Metric</th><th>Weight</th><th>What it measures</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Normalized Levenshtein</td><td>30%</td><td>Minimum character edits needed to transform one word into the other, normalized by length. Core orthographic measure.</td></tr>
+            <tr><td>Jaro-Winkler</td><td>25%</td><td>Character-matching similarity with a bonus for shared prefixes. Rewards words that start the same way.</td></tr>
+            <tr><td>Metaphone</td><td>15%</td><td>English phonetic encoding. Returns 1.0 if both words produce the same Metaphone code, 0.0 otherwise. Uses <code>jellyfish</code>.</td></tr>
+            <tr><td>Soundex</td><td>10%</td><td>Coarser phonetic encoding. Same binary scoring as Metaphone. Uses <code>jellyfish</code>.</td></tr>
+            <tr><td>Bigram Jaccard</td><td>10%</td><td>Overlap of character pairs (2-grams). Measures structural similarity at the substring level.</td></tr>
+            <tr><td>Trigram Jaccard</td><td>5%</td><td>Same as bigram but with character triples. Captures longer shared substrings.</td></tr>
+            <tr><td>Length Similarity</td><td>5%</td><td>1 minus the normalized length difference. Words of similar length score higher.</td></tr>
+          </tbody>
+        </table>
+
+        <p>Metaphone and Soundex are English-centric phonetic algorithms. They contribute meaningful signal for European languages but less so for languages with very different phonologies. The composite score is still dominated by the script-agnostic metrics (Levenshtein, Jaro-Winkler, n-grams).</p>
+
+        <h2>Cross-Language Comparison</h2>
+        <p>To compare two non-English languages (e.g., French vs Japanese), English is used as a pivot:</p>
+        <ol>
+          <li>Find English words that have translations in both languages.</li>
+          <li>Romanize both foreign translations.</li>
+          <li>Score the romanized forms against each other using the same composite metric.</li>
+        </ol>
+        <p>This measures whether two languages use similar-sounding words for the same concepts. The method correctly identifies known relationships: Bosnian-Croatian (0.77), Czech-Slovak (0.71), Indonesian-Malay (0.70), Spanish-Portuguese (0.69).</p>
+        <p>Limitations: the pivot approach only covers concepts that exist in all three languages' dictionaries. Scores may be biased toward loanwords that passed through English.</p>
+
+        <h2>Network Graph</h2>
+        <p>The force-directed network uses D3.js. Each language is a node, connected to its most similar neighbors (top 3) plus any pair scoring above 0.55.</p>
+        <ul>
+          <li><strong>Family placement</strong> — a preliminary force simulation runs on language families themselves, using inter-family similarity scores as edge weights. Similar families (e.g., Romance and Germanic) end up near each other.</li>
+          <li><strong>Node sizing</strong> — radius scales with centrality (average similarity to all other languages) using a cubic power scale, so highly connected languages visually stand out.</li>
+          <li><strong>Family gravity</strong> — each node is pulled toward its family's computed center. Nodes cannot drift beyond 120px from their family zone.</li>
+          <li><strong>Inter-family repulsion</strong> — nodes from different families push each other apart when close, creating visible gaps between clusters.</li>
+          <li><strong>Ambient drift</strong> — idle nodes float gently with per-node randomized drift vectors until the user interacts.</li>
+        </ul>
+
+        <h2>Compare Tool</h2>
+        <p>The word compare feature uses pre-computed lookup dictionaries (one JSON file per language). If a word is not in the dictionary, it falls back to live translation via LibreTranslate free API mirrors. Client-side scoring in JavaScript reimplements Levenshtein, Jaro-Winkler, and n-gram Jaccard. Soundex/Metaphone are not available in JS, so their combined 25% weight is redistributed equally to Levenshtein and Jaro-Winkler.</p>
+
+        <h2>Libraries</h2>
+        <table class="explainer-table">
+          <thead>
+            <tr><th>Library</th><th>Role</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><code>jellyfish</code></td><td>Levenshtein, Jaro-Winkler, Soundex, Metaphone (Python)</td></tr>
+            <tr><td><code>pypinyin</code></td><td>Chinese to Pinyin romanization</td></tr>
+            <tr><td><code>pykakasi</code></td><td>Japanese to Hepburn romanization</td></tr>
+            <tr><td><code>indic-transliteration</code></td><td>Devanagari/Bengali to IAST</td></tr>
+            <tr><td><code>unidecode</code></td><td>Unicode to ASCII transliteration (Cyrillic, Arabic, etc.)</td></tr>
+            <tr><td>D3.js v7</td><td>Force-directed network graph, zoom/pan, SVG rendering</td></tr>
+            <tr><td>Chart.js v4</td><td>Bar charts, stacked bars, histograms</td></tr>
+            <tr><td>HuggingFace <code>datasets</code></td><td>PanLex data extraction via pandas joins</td></tr>
+          </tbody>
+        </table>
+
+        <h2>Color Scheme</h2>
+        <p>Node colors encode approximate geographic origin of each language family, following a west-to-east gradient:</p>
+        <ul>
+          <li>Reds/oranges — Western/Northern Europe (Celtic, Germanic, Romance, Basque)</li>
+          <li>Rose/magenta — Southeastern Europe (Albanian, Hellenic)</li>
+          <li>Purples — Eastern Europe (Slavic, Baltic, Uralic)</li>
+          <li>Greens — Middle East / Western Asia (Semitic, Armenian, Kartvelian)</li>
+          <li>Olive — Central Asia (Turkic, Mongolic)</li>
+          <li>Teal — South Asia (Indo-Iranian, Dravidian)</li>
+          <li>Blues — East Asia (Sino-Tibetan, Japonic, Koreanic)</li>
+          <li>Cyan — Southeast Asia / Pacific (Tai-Kadai, Austroasiatic, Austronesian)</li>
+          <li>Browns — Africa (Niger-Congo, Chadic, Cushitic)</li>
+        </ul>
+
+        <h2>Source Code</h2>
+        <p>All code, data pipelines, and this website are open source at <a href="https://github.com/Cooolersam/Linder">github.com/Cooolersam/Linder</a>.</p>
+
       </section>
     </main>
 
@@ -324,7 +409,7 @@
     </main>
 
     <footer>
-      <p>Built with Python, Chart.js, D3.js, and the MUSE bilingual dictionaries. <a href="https://github.com/Cooolersam/Linder">GitHub</a></p>
+      <p><a href="#" onclick="showView('method'); return false;">Methodology</a> &middot; <a href="https://github.com/Cooolersam/Linder">GitHub</a></p>
     </footer>
 
     <script src="app.js"></script>
