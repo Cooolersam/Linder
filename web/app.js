@@ -455,12 +455,6 @@ function renderHistogram(bins) {
     });
 }
 
-function showOverview() {
-    document.getElementById("detail").classList.add("hidden");
-    document.getElementById("overview").classList.remove("hidden");
-    window.scrollTo(0, 0);
-}
-
 // ---- Utils ----
 function mean(arr) { return arr.reduce((a, b) => a + b, 0) / arr.length; }
 function std(arr) {
