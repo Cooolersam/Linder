@@ -607,13 +607,20 @@ function renderNetwork(data) {
         .data(data.nodes)
         .join("g");
 
-    // Node circles
+    // Invisible hit area — larger than the visible circle for easier clicking
     node.append("circle")
+        .attr("r", d => radiusScale(d.centrality) + 10)
+        .attr("fill", "transparent")
+        .style("cursor", "pointer");
+
+    // Visible node circle
+    node.append("circle")
+        .attr("class", "node-dot")
         .attr("r", d => radiusScale(d.centrality))
         .attr("fill", d => familyColor(d.family))
         .attr("stroke", "#fff")
         .attr("stroke-width", 1)
-        .style("cursor", "pointer");
+        .style("pointer-events", "none");
 
     // Node label background pill — guarantees text is always readable
     node.append("rect")
@@ -700,7 +707,7 @@ function renderNetwork(data) {
             link.attr("stroke", "#c0c0c0")
                 .attr("stroke-opacity", 0.2)
                 .attr("stroke-width", d => edgeWidthScale(d.score));
-            node.select("circle").attr("opacity", 1);
+            node.select(".node-dot").attr("opacity", 1);
             node.select("text").attr("opacity", 1);
             node.select(".label-bg").attr("opacity", 1);
             familyLabels.attr("opacity", 1);
@@ -715,7 +722,7 @@ function renderNetwork(data) {
             link.attr("stroke", l => isWithinEdge(l) ? edgeHighlightColor(l, activeIds) : "#e8e8e8")
                 .attr("stroke-opacity", l => isWithinEdge(l) ? 0.85 : 0.08)
                 .attr("stroke-width", l => isWithinEdge(l) ? edgeWidthScale(l.score) * 1.4 : edgeWidthScale(l.score) * 0.3);
-            node.select("circle").attr("opacity", n => activeIds.has(n.id) ? 1 : 0.12);
+            node.select(".node-dot").attr("opacity", n => activeIds.has(n.id) ? 1 : 0.12);
             node.select("text").attr("opacity", n => activeIds.has(n.id) ? 1 : 0.08);
             node.select(".label-bg").attr("opacity", n => activeIds.has(n.id) ? 1 : 0.08);
             familyLabels.attr("opacity", fam => isFamilyActive(fam, activeIds) ? 1 : 0.12);
@@ -724,7 +731,7 @@ function renderNetwork(data) {
             link.attr("stroke", l => isHighlightedEdge(l, activeIds) ? edgeHighlightColor(l, activeIds) : "#e8e8e8")
                 .attr("stroke-opacity", l => isHighlightedEdge(l, activeIds) ? 0.85 : 0.08)
                 .attr("stroke-width", l => isHighlightedEdge(l, activeIds) ? edgeWidthScale(l.score) * 1.4 : edgeWidthScale(l.score) * 0.3);
-            node.select("circle").attr("opacity", n => connected.has(n.id) ? 1 : 0.12);
+            node.select(".node-dot").attr("opacity", n => connected.has(n.id) ? 1 : 0.12);
             node.select("text").attr("opacity", n => connected.has(n.id) ? 1 : 0.08);
             node.select(".label-bg").attr("opacity", n => connected.has(n.id) ? 1 : 0.08);
             familyLabels.attr("opacity", fam => isFamilyActive(fam, connected) ? 1 : 0.12);
@@ -978,6 +985,8 @@ function openSidebar(langNode, graphData) {
     sidebar.classList.remove("hidden");
 
     document.getElementById("sidebarClose").onclick = () => closeSidebar();
+    // Prevent sidebar interactions from closing itself via SVG click handler
+    sidebar.onclick = (e) => e.stopPropagation();
 
     const code = langNode.id;
     const name = langNode.name;
