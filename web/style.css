@@ -395,6 +395,24 @@ td.score-cell {
     background: #eef4ff;
 }
 
+.network-zoom-hint {
+    position: absolute;
+    bottom: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.78rem;
+    color: var(--text-secondary);
+    background: rgba(255,255,255,0.9);
+    padding: 6px 16px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    pointer-events: none;
+    z-index: 10;
+    transition: opacity 0.5s;
+}
+
+.network-zoom-hint.faded { opacity: 0; }
+
 .network-legend {
     display: flex;
     flex-wrap: wrap;

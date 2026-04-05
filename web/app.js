@@ -487,6 +487,12 @@ function renderNetwork(data) {
         .on("zoom", (event) => { zoomG.attr("transform", event.transform); });
     svg.call(zoom);
 
+    // Fade out the zoom hint on first interaction
+    const zoomHint = document.getElementById("zoomHint");
+    svg.on("wheel.hint mousedown.hint", () => {
+        if (zoomHint) zoomHint.classList.add("faded");
+    }, { once: true });
+
     const tooltip = document.getElementById("networkTooltip");
 
     // Scale node radius — exponential: top connectors pop, average ones stay small
@@ -668,22 +674,42 @@ function renderNetwork(data) {
         return "#c0c0c0";
     }
 
+    // mode: "node" = show selected + their connections, "family" = only selected nodes + within-edges
+    let highlightMode = "node";
+
     function applyHighlight(activeIds) {
         if (activeIds.size === 0) {
-            // Reset everything
             link.attr("stroke", "#c0c0c0")
                 .attr("stroke-opacity", 0.2)
                 .attr("stroke-width", d => edgeWidthScale(d.score));
             node.select("circle").attr("opacity", 1);
             node.select("text").attr("opacity", 1);
+            node.select(".label-bg").attr("opacity", 1);
             return;
         }
-        const connected = getConnected(activeIds);
-        link.attr("stroke", l => isHighlightedEdge(l, activeIds) ? edgeHighlightColor(l, activeIds) : "#e8e8e8")
-            .attr("stroke-opacity", l => isHighlightedEdge(l, activeIds) ? 0.85 : 0.15)
-            .attr("stroke-width", l => isHighlightedEdge(l, activeIds) ? edgeWidthScale(l.score) * 1.4 : edgeWidthScale(l.score) * 0.5);
-        node.select("circle").attr("opacity", n => connected.has(n.id) ? 1 : 0.2);
-        node.select("text").attr("opacity", n => connected.has(n.id) ? 1 : 0.15);
+
+        if (highlightMode === "family") {
+            // Family mode: only highlight edges between selected nodes
+            const isWithinEdge = (e) => {
+                const { src, tgt } = edgeId(e);
+                return activeIds.has(src) && activeIds.has(tgt);
+            };
+            link.attr("stroke", l => isWithinEdge(l) ? edgeHighlightColor(l, activeIds) : "#e8e8e8")
+                .attr("stroke-opacity", l => isWithinEdge(l) ? 0.85 : 0.08)
+                .attr("stroke-width", l => isWithinEdge(l) ? edgeWidthScale(l.score) * 1.4 : edgeWidthScale(l.score) * 0.3);
+            node.select("circle").attr("opacity", n => activeIds.has(n.id) ? 1 : 0.12);
+            node.select("text").attr("opacity", n => activeIds.has(n.id) ? 1 : 0.08);
+            node.select(".label-bg").attr("opacity", n => activeIds.has(n.id) ? 1 : 0.08);
+        } else {
+            // Node mode: show selected + all their connections
+            const connected = getConnected(activeIds);
+            link.attr("stroke", l => isHighlightedEdge(l, activeIds) ? edgeHighlightColor(l, activeIds) : "#e8e8e8")
+                .attr("stroke-opacity", l => isHighlightedEdge(l, activeIds) ? 0.85 : 0.08)
+                .attr("stroke-width", l => isHighlightedEdge(l, activeIds) ? edgeWidthScale(l.score) * 1.4 : edgeWidthScale(l.score) * 0.3);
+            node.select("circle").attr("opacity", n => connected.has(n.id) ? 1 : 0.12);
+            node.select("text").attr("opacity", n => connected.has(n.id) ? 1 : 0.08);
+            node.select(".label-bg").attr("opacity", n => connected.has(n.id) ? 1 : 0.08);
+        }
     }
 
     // Build tooltip HTML for a single node
@@ -729,6 +755,7 @@ function renderNetwork(data) {
     // Click node: toggle selection, show persistent tooltip
     node.on("click", function(event, d) {
         event.stopPropagation();
+        highlightMode = "node";
         if (selected.has(d.id)) {
             selected.delete(d.id);
         } else {
@@ -800,16 +827,34 @@ function renderNetwork(data) {
     // Click family label: select all nodes in that family
     familyLabels.on("click", function(event, family) {
         event.stopPropagation();
+        highlightMode = "family";
         const familyNodeIds = data.nodes.filter(n => n.family === family).map(n => n.id);
-        // Toggle: if all are already selected, deselect them
+        // Toggle: if all are already selected, deselect them; else clear + select this family
         const allSelected = familyNodeIds.every(id => selected.has(id));
-        if (allSelected) {
-            familyNodeIds.forEach(id => selected.delete(id));
-        } else {
+        selected.clear();
+        if (!allSelected) {
             familyNodeIds.forEach(id => selected.add(id));
         }
         applyHighlight(selected);
-        showSelectionTooltip();
+        if (selected.size > 0) {
+            tooltip.style.display = "block";
+            tooltip.innerHTML = `<strong>${family}</strong><br>` +
+                `<span style="opacity:0.7">${familyNodeIds.length} languages</span><br>` +
+                familyNodeIds.map(id => {
+                    const n = data.nodes.find(x => x.id === id);
+                    return n ? `&nbsp;&nbsp;${n.name}` : "";
+                }).join("<br>");
+            // Position near the family label
+            const members = data.nodes.filter(n => n.family === family);
+            const svgRect = svg.node().getBoundingClientRect();
+            const avgX = d3.mean(members, d => d.x);
+            const avgY = d3.mean(members, d => d.y);
+            const transform = d3.zoomTransform(svg.node());
+            tooltip.style.left = (svgRect.left + transform.applyX(avgX) + 20) + "px";
+            tooltip.style.top = (svgRect.top + transform.applyY(avgY)) + "px";
+        } else {
+            tooltip.style.display = "none";
+        }
     });
 
     // Re-append node group so nodes render on top of family labels
