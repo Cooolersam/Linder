@@ -556,13 +556,13 @@ function renderNetwork(data) {
     // Run a quick synchronous force sim on families (50 ticks)
     const famSim = d3.forceSimulation(famNodes)
         .force("link", d3.forceLink(famEdges).id(d => d.id)
-            .distance(d => 500 * (1 - d.score))
-            .strength(d => d.score * 1.2))
-        .force("charge", d3.forceManyBody().strength(-500))
+            .distance(d => 400 * (1 - d.score))
+            .strength(d => d.score * 1.5))
+        .force("charge", d3.forceManyBody().strength(-300))
         .force("center", d3.forceCenter(cx, cy))
-        .force("collision", d3.forceCollide(140))
+        .force("collision", d3.forceCollide(80))
         .stop();
-    for (let i = 0; i < 120; i++) famSim.tick();
+    for (let i = 0; i < 80; i++) famSim.tick();
 
     // Clamp and store family positions
     const familyTargets = {};
@@ -592,24 +592,14 @@ function renderNetwork(data) {
         }
     }
 
-    // Custom force: pull nodes toward family zone + hard leash
-    const maxDriftRadius = 120; // max distance a node can drift from its family center
-    function familyGravity() {
+    // Custom force: pull nodes toward their family's home zone
+    function familyGravity(alpha) {
+        const strength = 0.12;
         data.nodes.forEach(d => {
             const target = familyTargets[d.family];
             if (!target) return;
-            const dx = target.x - d.x;
-            const dy = target.y - d.y;
-            const dist = Math.sqrt(dx * dx + dy * dy) || 1;
-            // Constant pull (not alpha-scaled) so it always counteracts drift
-            d.vx += dx * 0.02;
-            d.vy += dy * 0.02;
-            // Hard leash: if beyond max radius, snap back
-            if (dist > maxDriftRadius) {
-                const overshoot = dist - maxDriftRadius;
-                d.vx += (dx / dist) * overshoot * 0.3;
-                d.vy += (dy / dist) * overshoot * 0.3;
-            }
+            d.vx += (target.x - d.x) * strength * alpha;
+            d.vy += (target.y - d.y) * strength * alpha;
         });
     }
 
