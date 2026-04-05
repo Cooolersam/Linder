@@ -603,13 +603,26 @@ function renderNetwork(data) {
         });
     }
 
-    // Ambient drift — gentle random jitter until user interacts
+    // Ambient drift — smooth slow float until user interacts
     let ambientActive = true;
-    function ambientDrift(alpha) {
+    let ambientTick = 0;
+    const ambientInterval = 60;  // hold direction for 60 ticks
+    const ambientVectors = new Map();
+    function ambientDrift() {
         if (!ambientActive) return;
+        ambientTick++;
+        if (ambientTick % ambientInterval === 0) {
+            // Pick new slow drift direction for each node
+            data.nodes.forEach(d => {
+                ambientVectors.set(d, {
+                    dx: (Math.random() - 0.5) * 0.3,
+                    dy: (Math.random() - 0.5) * 0.3,
+                });
+            });
+        }
         data.nodes.forEach(d => {
-            d.vx += (Math.random() - 0.5) * 1.5;
-            d.vy += (Math.random() - 0.5) * 1.5;
+            const v = ambientVectors.get(d);
+            if (v) { d.vx += v.dx; d.vy += v.dy; }
         });
     }
 
@@ -648,8 +661,8 @@ function renderNetwork(data) {
         .force("familyGravity", familyGravity)
         .force("ambient", ambientDrift)
         .force("center", d3.forceCenter(cx, cy).strength(0.015))
-        .alphaTarget(0.03)   // keep alive with gentle warmth
-        .alphaDecay(0.005);  // slow cooldown
+        .alphaTarget(0.015)  // gentle warmth
+        .alphaDecay(0.003);  // very slow cooldown
 
     // Draw edges
     const link = zoomG.append("g")
