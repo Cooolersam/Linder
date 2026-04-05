@@ -465,14 +465,15 @@ async function loadAndRenderNetwork() {
 
 function renderNetwork(data) {
     const container = document.getElementById("networkContainer");
-    const width = Math.max(1000, container.clientWidth || 1200);
-    const height = Math.max(750, Math.min(950, width * 0.7));
+    // Zoomed-out viewBox — larger coordinate space so everything is smaller
+    const width = 1800;
+    const height = 1200;
 
     const svg = d3.select("#networkSvg")
         .attr("viewBox", `0 0 ${width} ${height}`)
         .attr("preserveAspectRatio", "xMidYMid meet")
         .style("width", "100%")
-        .style("height", height + "px")
+        .style("height", "700px")
         .style("user-select", "none")
         .style("-webkit-user-select", "none");
 
@@ -480,25 +481,24 @@ function renderNetwork(data) {
 
     const tooltip = document.getElementById("networkTooltip");
 
-    // Scale node radius by centrality — smaller nodes for 96 languages
+    // Scale node radius — small dots
     const centralityExtent = d3.extent(data.nodes, d => d.centrality);
     const radiusScale = d3.scaleSqrt()
         .domain(centralityExtent)
-        .range([4, 14]);
+        .range([3, 10]);
 
-    // Scale edge width by score — thinner lines for readability
+    // Scale edge width — thin lines
     const scoreExtent = d3.extent(data.edges, d => d.score);
     const edgeWidthScale = d3.scaleLinear()
         .domain(scoreExtent)
-        .range([0.3, 4]);
+        .range([0.2, 2.5]);
 
     // ---- Family home regions ----
-    // Assign each family a target zone on the graph. Nodes gravitate back
-    // to their zone so families cluster visually and recover after dragging.
+    // Spread families across a wider ellipse so groups have clear gaps
     const uniqueFamilies = [...new Set(data.nodes.map(n => n.family))];
     const familyTargets = {};
     const cx = width / 2, cy = height / 2;
-    const rx = width * 0.33, ry = height * 0.33;
+    const rx = width * 0.40, ry = height * 0.40;
     uniqueFamilies.forEach((fam, i) => {
         const angle = (2 * Math.PI * i) / uniqueFamilies.length - Math.PI / 2;
         familyTargets[fam] = {
@@ -509,14 +509,14 @@ function renderNetwork(data) {
 
     // Custom force: strong repulsion between different families
     function familyRepulsion(alpha) {
-        const strength = 50;
+        const strength = 80;
         for (let i = 0; i < data.nodes.length; i++) {
             for (let j = i + 1; j < data.nodes.length; j++) {
                 const a = data.nodes[i], b = data.nodes[j];
                 if (a.family === b.family) continue;
                 const dx = a.x - b.x, dy = a.y - b.y;
                 const dist = Math.sqrt(dx * dx + dy * dy) || 1;
-                if (dist > 400) continue;
+                if (dist > 500) continue;
                 const force = strength * alpha / dist;
                 const fx = dx / dist * force, fy = dy / dist * force;
                 a.vx += fx; a.vy += fy;
@@ -527,7 +527,7 @@ function renderNetwork(data) {
 
     // Custom force: pull nodes toward their family's home zone
     function familyGravity(alpha) {
-        const strength = 0.08;
+        const strength = 0.12;
         data.nodes.forEach(d => {
             const target = familyTargets[d.family];
             if (!target) return;
@@ -536,7 +536,7 @@ function renderNetwork(data) {
         });
     }
 
-    // Force simulation — family-clustered layout
+    // Force simulation — family-clustered, zoomed-out layout
     const simulation = d3.forceSimulation(data.nodes)
         .force("link", d3.forceLink(data.edges)
             .id(d => d.id)
@@ -545,33 +545,33 @@ function renderNetwork(data) {
                 const tgt = typeof d.target === "object" ? d.target : data.nodes.find(n => n.id === d.target);
                 const sameFamily = src && tgt && src.family === tgt.family;
                 return sameFamily
-                    ? 100 * (1 - d.score) + 25
-                    : 250 * (1 - d.score) + 100;
+                    ? 60 * (1 - d.score) + 15
+                    : 300 * (1 - d.score) + 150;
             })
             .strength(d => {
                 const src = typeof d.source === "object" ? d.source : data.nodes.find(n => n.id === d.source);
                 const tgt = typeof d.target === "object" ? d.target : data.nodes.find(n => n.id === d.target);
                 const sameFamily = src && tgt && src.family === tgt.family;
-                return sameFamily ? d.score * 0.7 : d.score * 0.2;
+                return sameFamily ? d.score * 0.8 : d.score * 0.1;
             }))
         .force("charge", d3.forceManyBody()
-            .strength(-1000)
-            .distanceMax(600))
+            .strength(-400)
+            .distanceMax(400))
         .force("collision", d3.forceCollide()
-            .radius(d => radiusScale(d.centrality) + 25)
-            .strength(0.8))
+            .radius(d => radiusScale(d.centrality) + 18)
+            .strength(0.9))
         .force("familyRepulsion", familyRepulsion)
         .force("familyGravity", familyGravity)
-        .force("center", d3.forceCenter(cx, cy).strength(0.02));
+        .force("center", d3.forceCenter(cx, cy).strength(0.015));
 
-    // Draw edges — width shows connection strength
+    // Draw edges
     const link = svg.append("g")
         .selectAll("line")
         .data(data.edges)
         .join("line")
         .attr("stroke", "#c0c0c0")
         .attr("stroke-width", d => edgeWidthScale(d.score))
-        .attr("stroke-opacity", 0.25);
+        .attr("stroke-opacity", 0.2);
 
     // Draw nodes
     const node = svg.append("g")
@@ -588,23 +588,44 @@ function renderNetwork(data) {
         .attr("r", d => radiusScale(d.centrality))
         .attr("fill", d => familyColor(d.family))
         .attr("stroke", "#fff")
-        .attr("stroke-width", 1.5)
+        .attr("stroke-width", 1)
         .style("cursor", "pointer");
 
-    // Node labels — all readable, larger nodes get slightly bigger text
-    node.append("text")
+    // Node label background pill — guarantees text is always readable
+    node.append("rect")
+        .attr("class", "label-bg")
+        .attr("fill", "rgba(250,250,250,0.85)")
+        .attr("rx", 3)
+        .attr("ry", 3)
+        .style("pointer-events", "none");
+
+    // Node label text
+    const labelText = node.append("text")
         .text(d => d.name)
-        .attr("dx", d => radiusScale(d.centrality) + 5)
+        .attr("dx", d => radiusScale(d.centrality) + 4)
         .attr("dy", "0.35em")
-        .attr("font-size", d => {
-            const r = radiusScale(d.centrality);
-            return r > 16 ? "12.5px" : r > 12 ? "11.5px" : "11px";
-        })
+        .attr("font-size", "9px")
         .attr("font-weight", 500)
         .attr("font-family", "-apple-system, sans-serif")
         .attr("fill", "#1a1a1a")
         .style("pointer-events", "none")
         .style("user-select", "none");
+
+    // Size the background pills to fit text (after first render tick)
+    requestAnimationFrame(() => {
+        node.each(function(d) {
+            const g = d3.select(this);
+            const text = g.select("text");
+            const bg = g.select(".label-bg");
+            try {
+                const bbox = text.node().getBBox();
+                bg.attr("x", bbox.x - 2)
+                  .attr("y", bbox.y - 1)
+                  .attr("width", bbox.width + 4)
+                  .attr("height", bbox.height + 2);
+            } catch(e) {}
+        });
+    });
 
     // ---- Selection + Hover logic ----
     const selected = new Set();  // locked/clicked node IDs
@@ -647,7 +668,7 @@ function renderNetwork(data) {
         if (activeIds.size === 0) {
             // Reset everything
             link.attr("stroke", "#c0c0c0")
-                .attr("stroke-opacity", 0.25)
+                .attr("stroke-opacity", 0.2)
                 .attr("stroke-width", d => edgeWidthScale(d.score));
             node.select("circle").attr("opacity", 1);
             node.select("text").attr("opacity", 1);
@@ -776,7 +797,7 @@ function renderNetwork(data) {
     svg.node().appendChild(node.node().parentNode);
 
     // Tick
-    const pad = { left: 20, right: 120, top: 30, bottom: 20 };
+    const pad = { left: 30, right: 100, top: 30, bottom: 30 };
     simulation.on("tick", () => {
         // Keep nodes + labels fully within viewBox
         data.nodes.forEach(d => {
