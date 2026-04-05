@@ -879,11 +879,11 @@ function renderNetwork(data) {
         node.attr("transform", d => `translate(${d.x},${d.y})`);
 
         // Update family label positions at cluster centroids
+        const labelPositions = [];
         familyLabels.each(function(family) {
             const members = data.nodes.filter(n => n.family === family);
             if (members.length === 0) return;
 
-            // Equal-weight centroid of all family members, offset above
             const centX = d3.mean(members, m => m.x);
             const centY = d3.mean(members, m => m.y);
             const labelY = centY - 30;
@@ -894,14 +894,39 @@ function renderNetwork(data) {
             const clampedY = Math.max(16, Math.min(height - 16, labelY));
             textEl.attr("x", clampedX).attr("y", clampedY);
 
-            // Size the background rect to fit text with generous padding
             const bbox = textEl.node().getBBox();
             g.select("rect")
                 .attr("x", bbox.x - 10)
                 .attr("y", bbox.y - 5)
                 .attr("width", bbox.width + 20)
                 .attr("height", bbox.height + 10);
+
+            labelPositions.push({
+                family,
+                x: clampedX,
+                y: clampedY,
+                hw: (bbox.width / 2) + 16,  // half-width + margin
+                hh: (bbox.height / 2) + 12, // half-height + margin
+            });
         });
+
+        // Push nodes away from family label rects
+        for (const lp of labelPositions) {
+            data.nodes.forEach(d => {
+                const dx = d.x - lp.x;
+                const dy = d.y - lp.y;
+                if (Math.abs(dx) < lp.hw && Math.abs(dy) < lp.hh) {
+                    // Node overlaps the label rect — push it out
+                    const pushX = dx >= 0 ? lp.hw - dx : -(lp.hw + dx);
+                    const pushY = dy >= 0 ? lp.hh - dy : -(lp.hh + dy);
+                    if (Math.abs(pushX) < Math.abs(pushY)) {
+                        d.x += pushX * 0.3;
+                    } else {
+                        d.y += pushY * 0.3;
+                    }
+                }
+            });
+        }
     });
 
     // Reset button — clear selections, reset zoom, reheat simulation
