@@ -479,6 +479,200 @@ td.score-cell {
     border: 1px solid var(--border);
 }
 
+/* ===== Compare Tool ===== */
+.compare-tool {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 28px 24px;
+    box-shadow: var(--shadow);
+}
+
+.compare-side {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    position: relative;
+}
+
+.compare-arrow {
+    padding-top: 36px;
+    color: var(--text-secondary);
+    flex-shrink: 0;
+}
+
+.compare-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-secondary);
+}
+
+.compare-select {
+    font-family: var(--font);
+    font-size: 0.95rem;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--bg);
+    color: var(--text);
+    width: 100%;
+}
+
+.compare-input {
+    font-family: var(--font);
+    font-size: 1.1rem;
+    padding: 14px 16px;
+    border: 2px solid var(--border);
+    border-radius: 10px;
+    background: var(--bg);
+    color: var(--text);
+    width: 100%;
+    transition: border-color 0.15s;
+}
+
+.compare-input:focus {
+    outline: none;
+    border-color: var(--accent);
+}
+
+.compare-suggestions {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    box-shadow: var(--shadow-lg);
+    z-index: 50;
+    max-height: 200px;
+    overflow-y: auto;
+    display: none;
+}
+
+.compare-suggestions.visible { display: block; }
+
+.compare-suggestion {
+    padding: 8px 14px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.compare-suggestion:hover { background: #f0f4ff; }
+.compare-suggestion:last-child { border-bottom: none; }
+
+.compare-result {
+    font-size: 1.1rem;
+    padding: 14px 16px;
+    border: 2px solid var(--border);
+    border-radius: 10px;
+    background: var(--bg);
+    min-height: 50px;
+    display: flex;
+    align-items: center;
+}
+
+.compare-placeholder {
+    color: #bbb;
+    font-style: italic;
+}
+
+.compare-details {
+    margin-top: 24px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 28px 24px;
+    box-shadow: var(--shadow);
+    text-align: center;
+}
+
+.compare-words {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    margin-bottom: 8px;
+}
+
+.compare-word-display {
+    font-size: 1.5rem;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+}
+
+.compare-vs {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+.compare-romanized {
+    font-size: 0.88rem;
+    color: var(--text-secondary);
+    font-family: var(--mono);
+    margin-bottom: 20px;
+}
+
+.compare-score-big {
+    font-size: 3rem;
+    font-weight: 800;
+    font-family: var(--mono);
+    margin: 12px 0 4px;
+    letter-spacing: -2px;
+}
+
+.compare-score-big .score-label {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 500;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    margin-top: 4px;
+}
+
+.compare-metrics {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 12px;
+    margin-top: 20px;
+    text-align: center;
+}
+
+.compare-metric {
+    background: var(--bg);
+    border-radius: 8px;
+    padding: 14px 10px;
+}
+
+.compare-metric-value {
+    font-size: 1.2rem;
+    font-weight: 700;
+    font-family: var(--mono);
+}
+
+.compare-metric-label {
+    font-size: 0.72rem;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-top: 2px;
+}
+
+@media (max-width: 600px) {
+    .compare-tool { flex-direction: column; }
+    .compare-arrow { transform: rotate(90deg); align-self: center; padding: 0; }
+    .compare-score-big { font-size: 2.2rem; }
+}
+
 /* ===== Footer ===== */
 footer {
     text-align: center;

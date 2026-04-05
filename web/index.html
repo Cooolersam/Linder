@@ -41,6 +41,14 @@
       <!-- Card grid -->
       <section class="section">
         <div class="card-grid">
+          <div class="nav-card" onclick="showView('compare')">
+            <div class="nav-card-icon">
+              <svg width="48" height="48" viewBox="0 0 48 48" fill="none"><rect x="2" y="10" width="18" height="28" rx="4" stroke="#2171b5" stroke-width="2" fill="none"/><rect x="28" y="10" width="18" height="28" rx="4" stroke="#E91E63" stroke-width="2" fill="none"/><path d="M20 24 L28 24" stroke="#888" stroke-width="2" stroke-dasharray="2 2"/><circle cx="24" cy="24" r="3" fill="#4CAF50"/></svg>
+            </div>
+            <h3>Compare</h3>
+            <p>Look up how a word translates between any two languages and see the similarity breakdown.</p>
+          </div>
+
           <div class="nav-card" onclick="showView('heatmap')">
             <div class="nav-card-icon">
               <svg width="48" height="48" viewBox="0 0 48 48" fill="none"><rect x="4" y="4" width="12" height="12" rx="2" fill="#2171b5" opacity="0.9"/><rect x="18" y="4" width="12" height="12" rx="2" fill="#6baed6" opacity="0.7"/><rect x="32" y="4" width="12" height="12" rx="2" fill="#c6dbef" opacity="0.5"/><rect x="4" y="18" width="12" height="12" rx="2" fill="#6baed6" opacity="0.7"/><rect x="18" y="18" width="12" height="12" rx="2" fill="#2171b5" opacity="0.9"/><rect x="32" y="18" width="12" height="12" rx="2" fill="#6baed6" opacity="0.7"/><rect x="4" y="32" width="12" height="12" rx="2" fill="#c6dbef" opacity="0.5"/><rect x="18" y="32" width="12" height="12" rx="2" fill="#6baed6" opacity="0.7"/><rect x="32" y="32" width="12" height="12" rx="2" fill="#2171b5" opacity="0.9"/></svg>
@@ -182,6 +190,45 @@
             </thead>
             <tbody></tbody>
           </table>
+        </div>
+      </section>
+    </main>
+
+    <main id="view-compare" class="view-page hidden">
+      <section class="view-header">
+        <button class="back-btn" onclick="showOverview()">&#8592; Back</button>
+        <h1>Word Compare</h1>
+        <p class="section-desc">Look up how a word translates between two languages and see how similar they look and sound.</p>
+      </section>
+      <section class="section">
+        <div class="compare-tool">
+          <div class="compare-side compare-left">
+            <label class="compare-label">From</label>
+            <select id="compareLangA" class="compare-select"></select>
+            <input id="compareWordInput" type="text" class="compare-input" placeholder="Type an English word..." autocomplete="off">
+            <div id="compareSuggestions" class="compare-suggestions"></div>
+          </div>
+          <div class="compare-arrow">
+            <svg width="32" height="32" viewBox="0 0 32 32"><path d="M8 16h16M18 10l6 6-6 6" stroke="#888" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <div class="compare-side compare-right">
+            <label class="compare-label">To</label>
+            <select id="compareLangB" class="compare-select"></select>
+            <div id="compareResult" class="compare-result">
+              <span class="compare-placeholder">Translation will appear here</span>
+            </div>
+          </div>
+        </div>
+
+        <div id="compareDetails" class="compare-details hidden">
+          <div class="compare-words">
+            <span id="compareWordA" class="compare-word-display"></span>
+            <span class="compare-vs">vs</span>
+            <span id="compareWordB" class="compare-word-display"></span>
+          </div>
+          <div id="compareRomanized" class="compare-romanized"></div>
+          <div class="compare-score-big" id="compareScoreBig"></div>
+          <div class="compare-metrics" id="compareMetrics"></div>
         </div>
       </section>
     </main>

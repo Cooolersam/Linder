@@ -67,6 +67,7 @@ function showView(viewId) {
                 case "rankings": renderMainChart(); break;
                 case "families": renderFamilyChart(); break;
                 case "distribution": renderBandsChart(); break;
+                case "compare": initCompare(); break;
                 case "data": renderTable(); break;
             }
         }
@@ -877,6 +878,223 @@ function renderNetwork(data) {
             ${f}
         </span>`
     ).join("");
+}
+
+// ---- Compare Tool ----
+
+const compareLookups = {};  // lang_code -> { en_word: { f, r, s } }
+
+async function loadLookup(code) {
+    if (compareLookups[code]) return compareLookups[code];
+    try {
+        const resp = await fetch(`${DATA_BASE}/lookup/${code}.json`);
+        compareLookups[code] = await resp.json();
+    } catch (e) {
+        compareLookups[code] = {};
+    }
+    return compareLookups[code];
+}
+
+function initCompare() {
+    const langA = document.getElementById("compareLangA");
+    const langB = document.getElementById("compareLangB");
+    const input = document.getElementById("compareWordInput");
+    const suggestions = document.getElementById("compareSuggestions");
+
+    // Populate language dropdowns from summary data
+    const langOptions = summaryData
+        .map(d => ({ code: d.code, name: d.lang }))
+        .sort((a, b) => a.name.localeCompare(b.name));
+
+    // Add English as source option
+    langA.innerHTML = `<option value="en">English</option>`;
+
+    langB.innerHTML = langOptions.map(d =>
+        `<option value="${d.code}" ${d.code === "fr" ? "selected" : ""}>${d.name}</option>`
+    ).join("");
+
+    let debounceTimer = null;
+
+    input.addEventListener("input", () => {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => runCompare(), 150);
+        showSuggestions();
+    });
+
+    input.addEventListener("focus", () => showSuggestions());
+    document.addEventListener("click", (e) => {
+        if (!e.target.closest(".compare-left")) suggestions.classList.remove("visible");
+    });
+
+    langB.addEventListener("change", () => runCompare());
+
+    async function showSuggestions() {
+        const word = input.value.trim().toLowerCase();
+        if (word.length < 1) { suggestions.classList.remove("visible"); return; }
+
+        const code = langB.value;
+        const lookup = await loadLookup(code);
+        const words = Object.keys(lookup);
+        const matches = words.filter(w => w.startsWith(word)).slice(0, 8);
+
+        if (matches.length === 0) { suggestions.classList.remove("visible"); return; }
+
+        suggestions.innerHTML = matches.map(w =>
+            `<div class="compare-suggestion" data-word="${w}">${w} → ${lookup[w].f}</div>`
+        ).join("");
+        suggestions.classList.add("visible");
+
+        suggestions.querySelectorAll(".compare-suggestion").forEach(el => {
+            el.addEventListener("click", () => {
+                input.value = el.dataset.word;
+                suggestions.classList.remove("visible");
+                runCompare();
+            });
+        });
+    }
+
+    async function runCompare() {
+        const word = input.value.trim().toLowerCase();
+        const code = langB.value;
+        const resultEl = document.getElementById("compareResult");
+        const detailsEl = document.getElementById("compareDetails");
+
+        if (!word) {
+            resultEl.innerHTML = `<span class="compare-placeholder">Translation will appear here</span>`;
+            detailsEl.classList.add("hidden");
+            return;
+        }
+
+        const lookup = await loadLookup(code);
+        const entry = lookup[word];
+
+        if (!entry) {
+            resultEl.innerHTML = `<span class="compare-placeholder">Word not found in dictionary</span>`;
+            detailsEl.classList.add("hidden");
+            return;
+        }
+
+        // Show translation
+        const foreign = entry.f;
+        const romanized = entry.r;
+        const showRom = romanized !== foreign;
+
+        resultEl.innerHTML = `<strong style="font-size:1.2rem">${foreign}</strong>` +
+            (showRom ? `<span style="margin-left:8px;color:var(--text-secondary);font-family:var(--mono);font-size:0.9rem">${romanized}</span>` : "");
+
+        // Compute detailed metrics client-side
+        const metrics = computeMetrics(word, romanized);
+
+        // Show details
+        detailsEl.classList.remove("hidden");
+        document.getElementById("compareWordA").textContent = word;
+        document.getElementById("compareWordB").textContent = foreign;
+
+        const romLine = document.getElementById("compareRomanized");
+        romLine.textContent = showRom ? `Romanized: ${romanized}  →  compared as "${romanized}" vs "${word}"` : `Compared as "${foreign}" vs "${word}"`;
+
+        const color = metrics.composite >= 0.7 ? "var(--green)" : metrics.composite >= 0.4 ? "var(--yellow)" : "var(--red)";
+        document.getElementById("compareScoreBig").innerHTML =
+            `<span style="color:${color}">${metrics.composite.toFixed(3)}</span>` +
+            `<span class="score-label">Composite Score</span>`;
+
+        document.getElementById("compareMetrics").innerHTML = [
+            { label: "Levenshtein", value: metrics.levenshtein },
+            { label: "Jaro-Winkler", value: metrics.jaroWinkler },
+            { label: "Bigram", value: metrics.bigram },
+            { label: "Trigram", value: metrics.trigram },
+            { label: "Length Sim", value: metrics.lengthSim },
+        ].map(m => {
+            const c = m.value >= 0.7 ? "var(--green)" : m.value >= 0.4 ? "var(--yellow)" : "var(--red)";
+            return `<div class="compare-metric">
+                <div class="compare-metric-value" style="color:${c}">${m.value.toFixed(3)}</div>
+                <div class="compare-metric-label">${m.label}</div>
+            </div>`;
+        }).join("");
+    }
+}
+
+// Client-side metric computation (mirrors Python logic)
+function computeMetrics(s1, s2) {
+    s1 = s1.toLowerCase(); s2 = s2.toLowerCase();
+
+    // Normalized Levenshtein
+    const levDist = levenshteinDist(s1, s2);
+    const maxLen = Math.max(s1.length, s2.length) || 1;
+    const normLev = 1 - levDist / maxLen;
+
+    // Jaro-Winkler
+    const jw = jaroWinkler(s1, s2);
+
+    // N-gram Jaccard
+    const bigram = ngramJaccard(s1, s2, 2);
+    const trigram = ngramJaccard(s1, s2, 3);
+
+    // Length similarity
+    const lengthSim = 1 - Math.abs(s1.length - s2.length) / maxLen;
+
+    // Composite (same weights as Python)
+    const composite = normLev * 0.30 + jw * 0.25 + bigram * 0.10 + trigram * 0.05 + lengthSim * 0.05;
+    // Phonetic metrics (Metaphone/Soundex) are hard to implement in JS, use remaining 0.25 weight on lev+jw
+    const compositeAdj = composite + normLev * 0.125 + jw * 0.125;
+
+    return { composite: compositeAdj, levenshtein: normLev, jaroWinkler: jw, bigram, trigram, lengthSim };
+}
+
+function levenshteinDist(a, b) {
+    const m = a.length, n = b.length;
+    const dp = Array.from({ length: m + 1 }, (_, i) => [i]);
+    for (let j = 1; j <= n; j++) dp[0][j] = j;
+    for (let i = 1; i <= m; i++) {
+        for (let j = 1; j <= n; j++) {
+            dp[i][j] = a[i-1] === b[j-1] ? dp[i-1][j-1]
+                : 1 + Math.min(dp[i-1][j], dp[i][j-1], dp[i-1][j-1]);
+        }
+    }
+    return dp[m][n];
+}
+
+function jaroWinkler(s1, s2) {
+    if (s1 === s2) return 1;
+    const len1 = s1.length, len2 = s2.length;
+    if (!len1 || !len2) return 0;
+    const matchDist = Math.max(Math.floor(Math.max(len1, len2) / 2) - 1, 0);
+    const s1Matches = new Array(len1).fill(false);
+    const s2Matches = new Array(len2).fill(false);
+    let matches = 0, transpositions = 0;
+    for (let i = 0; i < len1; i++) {
+        const start = Math.max(0, i - matchDist);
+        const end = Math.min(i + matchDist + 1, len2);
+        for (let j = start; j < end; j++) {
+            if (s2Matches[j] || s1[i] !== s2[j]) continue;
+            s1Matches[i] = true; s2Matches[j] = true; matches++; break;
+        }
+    }
+    if (!matches) return 0;
+    let k = 0;
+    for (let i = 0; i < len1; i++) {
+        if (!s1Matches[i]) continue;
+        while (!s2Matches[k]) k++;
+        if (s1[i] !== s2[k]) transpositions++;
+        k++;
+    }
+    const jaro = (matches / len1 + matches / len2 + (matches - transpositions / 2) / matches) / 3;
+    let prefix = 0;
+    for (let i = 0; i < Math.min(4, Math.min(len1, len2)); i++) {
+        if (s1[i] === s2[i]) prefix++; else break;
+    }
+    return jaro + prefix * 0.1 * (1 - jaro);
+}
+
+function ngramJaccard(s1, s2, n) {
+    if (s1.length < n && s2.length < n) return 1;
+    const grams = (s, n) => { const g = new Set(); for (let i = 0; i <= s.length - n; i++) g.add(s.slice(i, i + n)); return g; };
+    const g1 = grams(s1, n), g2 = grams(s2, n);
+    if (!g1.size && !g2.size) return 1;
+    let inter = 0;
+    g1.forEach(g => { if (g2.has(g)) inter++; });
+    const union = g1.size + g2.size - inter;
+    return union ? inter / union : 0;
 }
 
 // ---- Heatmap ----
