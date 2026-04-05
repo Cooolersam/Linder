@@ -609,14 +609,13 @@ function renderNetwork(data) {
     let ambientTick = 0;
     const ambientVectors = new Map();
     const ambientTimers = new Map();
-    // Each node gets a random interval (40-90 ticks) and random phase offset
     data.nodes.forEach(d => {
-        const interval = 40 + Math.floor(Math.random() * 50);
+        const interval = 80 + Math.floor(Math.random() * 120);
         const phase = Math.floor(Math.random() * interval);
         ambientTimers.set(d, { interval, phase });
         ambientVectors.set(d, {
-            dx: (Math.random() - 0.5) * 0.25,
-            dy: (Math.random() - 0.5) * 0.25,
+            dx: (Math.random() - 0.5) * 0.06,
+            dy: (Math.random() - 0.5) * 0.06,
         });
     });
     function ambientDrift() {
@@ -626,8 +625,8 @@ function renderNetwork(data) {
             const t = ambientTimers.get(d);
             if ((ambientTick + t.phase) % t.interval === 0) {
                 ambientVectors.set(d, {
-                    dx: (Math.random() - 0.5) * 0.25,
-                    dy: (Math.random() - 0.5) * 0.25,
+                    dx: (Math.random() - 0.5) * 0.06,
+                    dy: (Math.random() - 0.5) * 0.06,
                 });
             }
             const v = ambientVectors.get(d);
@@ -671,7 +670,7 @@ function renderNetwork(data) {
         .force("ambient", ambientDrift)
         .force("center", d3.forceCenter(cx, cy).strength(0.015))
         .alpha(0.05)         // start cool — no initial jitter burst
-        .alphaTarget(0.015)  // gentle warmth
+        .alphaTarget(0.005)  // barely warm
         .alphaDecay(0);      // never decay — stays at alphaTarget until frozen
         // Pre-settle: run 200 ticks without ambient to find stable positions
         simulation.force("ambient", null);
@@ -679,7 +678,7 @@ function renderNetwork(data) {
         for (let i = 0; i < 200; i++) simulation.tick();
         // Now add ambient and restart at low energy
         simulation.force("ambient", ambientDrift);
-        simulation.alpha(0.015).restart();
+        simulation.alpha(0.005).restart();
 
     // Draw edges
     const link = zoomG.append("g")
@@ -1054,7 +1053,7 @@ function renderNetwork(data) {
         // Restart ambient drift
         ambientActive = true;
         simulation.force("ambient", ambientDrift);
-        simulation.alphaTarget(0.03).alpha(0.5).restart();
+        simulation.alphaTarget(0.005).alpha(0.05).restart();
     };
 
     // Build legend
