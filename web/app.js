@@ -26,6 +26,10 @@ const FAMILY_COLORS = {
     "Celtic":         "#1B5E20",
     "Italic":         "#880E4F",
     "Niger-Congo":    "#BF360C",
+    "Kartvelian":     "#33691E",
+    "Armenian":       "#4E342E",
+    "Constructed":    "#37474F",
+    "Mongolic":       "#827717",
 };
 
 function familyColor(family) {

@@ -112,8 +112,43 @@ LANGUAGES = {
     "la": {"name": "Latin",       "family": "Italic",     "romanize": None},
     # ---- Niger-Congo (Swahili) ----
     "sw": {"name": "Swahili",     "family": "Niger-Congo", "romanize": None},
-    # ---- Indo-Iranian (Urdu) ----
-    "ur": {"name": "Urdu",        "family": "Indo-Iranian", "romanize": "unidecode"},
+    # ---- Indo-Iranian (Urdu, Marathi, Tajik) ----
+    "ur": {"name": "Urdu",              "family": "Indo-Iranian",  "romanize": "unidecode"},
+    "mr": {"name": "Marathi",            "family": "Indo-Iranian",  "romanize": "iast"},
+    "tg": {"name": "Tajik",              "family": "Indo-Iranian",  "romanize": "unidecode"},
+    # ---- Kartvelian ----
+    "ka": {"name": "Georgian",           "family": "Kartvelian",    "romanize": "unidecode"},
+    # ---- Armenian ----
+    "hy": {"name": "Armenian",           "family": "Armenian",      "romanize": "unidecode"},
+    # ---- Constructed ----
+    "eo": {"name": "Esperanto",          "family": "Constructed",   "romanize": None},
+    # ---- Mongolic ----
+    "mn": {"name": "Mongolian",          "family": "Mongolic",      "romanize": "unidecode"},
+    # ---- Additional Germanic ----
+    "is": {"name": "Icelandic",          "family": "Germanic",      "romanize": None},
+    "nb": {"name": "Norwegian Bokmal",   "family": "Germanic",      "romanize": None},
+    "yi": {"name": "Yiddish",            "family": "Germanic",      "romanize": "unidecode"},
+    # ---- Additional Romance ----
+    "gl": {"name": "Galician",           "family": "Romance",       "romanize": None},
+    "oc": {"name": "Occitan",            "family": "Romance",       "romanize": None},
+    # ---- Additional Slavic ----
+    "be": {"name": "Belarusian",         "family": "Slavic",        "romanize": "unidecode"},
+    "sh": {"name": "Serbo-Croatian",     "family": "Slavic",        "romanize": None},
+    # ---- Additional Celtic ----
+    "gd": {"name": "Scottish Gaelic",    "family": "Celtic",        "romanize": None},
+    # ---- Additional Turkic ----
+    "az": {"name": "Azerbaijani",        "family": "Turkic",        "romanize": None},
+    "kk": {"name": "Kazakh",             "family": "Turkic",        "romanize": "unidecode"},
+    "ky": {"name": "Kyrgyz",             "family": "Turkic",        "romanize": "unidecode"},
+    "uz": {"name": "Uzbek",              "family": "Turkic",        "romanize": None},
+    # ---- Additional Austronesian ----
+    "mi": {"name": "Maori",              "family": "Austronesian",  "romanize": None},
+    # ---- Additional Austroasiatic ----
+    "km": {"name": "Khmer",              "family": "Austroasiatic", "romanize": "unidecode"},
+    # ---- Additional Tai-Kadai ----
+    "lo": {"name": "Lao",                "family": "Tai-Kadai",     "romanize": "unidecode"},
+    # ---- Additional Sino-Tibetan ----
+    "my": {"name": "Burmese",            "family": "Sino-Tibetan",  "romanize": "unidecode"},
 }
 
 
