@@ -479,6 +479,13 @@ function renderNetwork(data) {
 
     svg.selectAll("*").remove();
 
+    // Zoom/pan container — all graph content goes inside this <g>
+    const zoomG = svg.append("g");
+    const zoom = d3.zoom()
+        .scaleExtent([0.3, 5])
+        .on("zoom", (event) => { zoomG.attr("transform", event.transform); });
+    svg.call(zoom);
+
     const tooltip = document.getElementById("networkTooltip");
 
     // Scale node radius — small dots
@@ -565,7 +572,7 @@ function renderNetwork(data) {
         .force("center", d3.forceCenter(cx, cy).strength(0.015));
 
     // Draw edges
-    const link = svg.append("g")
+    const link = zoomG.append("g")
         .selectAll("line")
         .data(data.edges)
         .join("line")
@@ -573,15 +580,11 @@ function renderNetwork(data) {
         .attr("stroke-width", d => edgeWidthScale(d.score))
         .attr("stroke-opacity", 0.2);
 
-    // Draw nodes
-    const node = svg.append("g")
+    // Draw nodes (no drag — use zoom/pan instead)
+    const node = zoomG.append("g")
         .selectAll("g")
         .data(data.nodes)
-        .join("g")
-        .call(d3.drag()
-            .on("start", dragstarted)
-            .on("drag", dragged)
-            .on("end", dragended));
+        .join("g");
 
     // Node circles
     node.append("circle")
@@ -734,9 +737,12 @@ function renderNetwork(data) {
         showSelectionTooltip();
     });
 
-    // Click blank SVG space: clear all selections
+    // Click blank space: clear all selections
+    // Use mousedown on SVG to catch clicks that aren't on nodes/labels
     svg.on("click", function(event) {
-        if (event.target === svg.node() || event.target.tagName === "svg") {
+        // Only clear if clicking the SVG background itself (not a node or family label)
+        const tag = event.target.tagName;
+        if (tag === "svg" || tag === "rect" && !event.target.closest(".family-labels")) {
             selected.clear();
             applyHighlight(selected);
             tooltip.style.display = "none";
@@ -761,18 +767,14 @@ function renderNetwork(data) {
         tooltip.style.display = "none";
     });
 
-    // Family labels — floating above edges, positioned at cluster centroids
+    // Family labels — clickable, floating above edges
     const familyList = [...new Set(data.nodes.map(n => n.family))];
 
-    // Layer order: edges -> family labels -> nodes (so labels sit between)
-    const familyLabelGroup = svg.append("g").attr("class", "family-labels");
+    const familyLabelGroup = zoomG.append("g").attr("class", "family-labels");
     const familyLabels = familyLabelGroup.selectAll("g")
         .data(familyList)
-        .join("g");
-
-    // Background rect + text for each family label — large and prominent
-    familyLabels
-        .style("pointer-events", "none")
+        .join("g")
+        .style("cursor", "pointer")
         .style("user-select", "none")
         .style("-webkit-user-select", "none");
 
@@ -791,10 +793,26 @@ function renderNetwork(data) {
         .attr("font-family", "-apple-system, sans-serif")
         .attr("fill", d => familyColor(d))
         .attr("text-anchor", "middle")
-        .attr("dominant-baseline", "central");
+        .attr("dominant-baseline", "central")
+        .style("pointer-events", "none");
+
+    // Click family label: select all nodes in that family
+    familyLabels.on("click", function(event, family) {
+        event.stopPropagation();
+        const familyNodeIds = data.nodes.filter(n => n.family === family).map(n => n.id);
+        // Toggle: if all are already selected, deselect them
+        const allSelected = familyNodeIds.every(id => selected.has(id));
+        if (allSelected) {
+            familyNodeIds.forEach(id => selected.delete(id));
+        } else {
+            familyNodeIds.forEach(id => selected.add(id));
+        }
+        applyHighlight(selected);
+        showSelectionTooltip();
+    });
 
     // Re-append node group so nodes render on top of family labels
-    svg.node().appendChild(node.node().parentNode);
+    zoomG.node().appendChild(node.node().parentNode);
 
     // Tick
     const pad = { left: 30, right: 100, top: 30, bottom: 30 };
@@ -841,34 +859,13 @@ function renderNetwork(data) {
         });
     });
 
-    function dragstarted(event) {
-        if (!event.active) simulation.alphaTarget(0.3).restart();
-        event.subject.fx = event.subject.x;
-        event.subject.fy = event.subject.y;
-        // Block text selection on the page during drag
-        document.body.style.userSelect = "none";
-        document.body.style.webkitUserSelect = "none";
-    }
-    function dragged(event) {
-        const r = radiusScale(event.subject.centrality);
-        event.subject.fx = Math.max(pad.left + r, Math.min(width - pad.right - r, event.x));
-        event.subject.fy = Math.max(pad.top + r, Math.min(height - pad.bottom - r, event.y));
-    }
-    function dragended(event) {
-        if (!event.active) simulation.alphaTarget(0);
-        event.subject.fx = null;
-        event.subject.fy = null;
-        document.body.style.userSelect = "";
-        document.body.style.webkitUserSelect = "";
-    }
-
-    // Reset button — clear selections, unpin all nodes, reheat simulation
+    // Reset button — clear selections, reset zoom, reheat simulation
     document.getElementById("networkResetBtn").onclick = () => {
         selected.clear();
         applyHighlight(selected);
         tooltip.style.display = "none";
-        data.nodes.forEach(d => { d.fx = null; d.fy = null; });
-        simulation.alpha(1).restart();
+        svg.transition().duration(500).call(zoom.transform, d3.zoomIdentity);
+        simulation.alpha(0.5).restart();
     };
 
     // Build legend
