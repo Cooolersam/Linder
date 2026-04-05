@@ -606,21 +606,29 @@ function renderNetwork(data) {
     // Ambient drift — smooth slow float until user interacts
     let ambientActive = true;
     let ambientTick = 0;
-    const ambientInterval = 60;  // hold direction for 60 ticks
     const ambientVectors = new Map();
+    const ambientTimers = new Map();
+    // Each node gets a random interval (40-90 ticks) and random phase offset
+    data.nodes.forEach(d => {
+        const interval = 40 + Math.floor(Math.random() * 50);
+        const phase = Math.floor(Math.random() * interval);
+        ambientTimers.set(d, { interval, phase });
+        ambientVectors.set(d, {
+            dx: (Math.random() - 0.5) * 0.25,
+            dy: (Math.random() - 0.5) * 0.25,
+        });
+    });
     function ambientDrift() {
         if (!ambientActive) return;
         ambientTick++;
-        if (ambientTick % ambientInterval === 0) {
-            // Pick new slow drift direction for each node
-            data.nodes.forEach(d => {
-                ambientVectors.set(d, {
-                    dx: (Math.random() - 0.5) * 0.3,
-                    dy: (Math.random() - 0.5) * 0.3,
-                });
-            });
-        }
         data.nodes.forEach(d => {
+            const t = ambientTimers.get(d);
+            if ((ambientTick + t.phase) % t.interval === 0) {
+                ambientVectors.set(d, {
+                    dx: (Math.random() - 0.5) * 0.25,
+                    dy: (Math.random() - 0.5) * 0.25,
+                });
+            }
             const v = ambientVectors.get(d);
             if (v) { d.vx += v.dx; d.vy += v.dy; }
         });
@@ -661,8 +669,16 @@ function renderNetwork(data) {
         .force("familyGravity", familyGravity)
         .force("ambient", ambientDrift)
         .force("center", d3.forceCenter(cx, cy).strength(0.015))
+        .alpha(0.05)         // start cool — no initial jitter burst
         .alphaTarget(0.015)  // gentle warmth
-        .alphaDecay(0.003);  // very slow cooldown
+        .alphaDecay(0);      // never decay — stays at alphaTarget until frozen
+        // Pre-settle: run 200 ticks without ambient to find stable positions
+        simulation.force("ambient", null);
+        simulation.stop();
+        for (let i = 0; i < 200; i++) simulation.tick();
+        // Now add ambient and restart at low energy
+        simulation.force("ambient", ambientDrift);
+        simulation.alpha(0.015).restart();
 
     // Draw edges
     const link = zoomG.append("g")
