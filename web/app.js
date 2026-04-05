@@ -677,6 +677,10 @@ function renderNetwork(data) {
     // mode: "node" = show selected + their connections, "family" = only selected nodes + within-edges
     let highlightMode = "node";
 
+    function isFamilyActive(family, visibleIds) {
+        return data.nodes.some(n => n.family === family && visibleIds.has(n.id));
+    }
+
     function applyHighlight(activeIds) {
         if (activeIds.size === 0) {
             link.attr("stroke", "#c0c0c0")
@@ -685,11 +689,11 @@ function renderNetwork(data) {
             node.select("circle").attr("opacity", 1);
             node.select("text").attr("opacity", 1);
             node.select(".label-bg").attr("opacity", 1);
+            familyLabels.attr("opacity", 1);
             return;
         }
 
         if (highlightMode === "family") {
-            // Family mode: only highlight edges between selected nodes
             const isWithinEdge = (e) => {
                 const { src, tgt } = edgeId(e);
                 return activeIds.has(src) && activeIds.has(tgt);
@@ -700,8 +704,8 @@ function renderNetwork(data) {
             node.select("circle").attr("opacity", n => activeIds.has(n.id) ? 1 : 0.12);
             node.select("text").attr("opacity", n => activeIds.has(n.id) ? 1 : 0.08);
             node.select(".label-bg").attr("opacity", n => activeIds.has(n.id) ? 1 : 0.08);
+            familyLabels.attr("opacity", fam => isFamilyActive(fam, activeIds) ? 1 : 0.12);
         } else {
-            // Node mode: show selected + all their connections
             const connected = getConnected(activeIds);
             link.attr("stroke", l => isHighlightedEdge(l, activeIds) ? edgeHighlightColor(l, activeIds) : "#e8e8e8")
                 .attr("stroke-opacity", l => isHighlightedEdge(l, activeIds) ? 0.85 : 0.08)
@@ -709,6 +713,7 @@ function renderNetwork(data) {
             node.select("circle").attr("opacity", n => connected.has(n.id) ? 1 : 0.12);
             node.select("text").attr("opacity", n => connected.has(n.id) ? 1 : 0.08);
             node.select(".label-bg").attr("opacity", n => connected.has(n.id) ? 1 : 0.08);
+            familyLabels.attr("opacity", fam => isFamilyActive(fam, connected) ? 1 : 0.12);
         }
     }
 
