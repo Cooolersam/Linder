@@ -480,17 +480,17 @@ function renderNetwork(data) {
 
     const tooltip = document.getElementById("networkTooltip");
 
-    // Scale node radius by centrality
+    // Scale node radius by centrality — smaller nodes for 96 languages
     const centralityExtent = d3.extent(data.nodes, d => d.centrality);
     const radiusScale = d3.scaleSqrt()
         .domain(centralityExtent)
-        .range([6, 22]);
+        .range([4, 14]);
 
-    // Scale edge width by score — thickness encodes strength, not opacity
+    // Scale edge width by score — thinner lines for readability
     const scoreExtent = d3.extent(data.edges, d => d.score);
     const edgeWidthScale = d3.scaleLinear()
         .domain(scoreExtent)
-        .range([0.5, 7]);
+        .range([0.3, 4]);
 
     // ---- Family home regions ----
     // Assign each family a target zone on the graph. Nodes gravitate back
@@ -509,14 +509,14 @@ function renderNetwork(data) {
 
     // Custom force: strong repulsion between different families
     function familyRepulsion(alpha) {
-        const strength = 25;
+        const strength = 50;
         for (let i = 0; i < data.nodes.length; i++) {
             for (let j = i + 1; j < data.nodes.length; j++) {
                 const a = data.nodes[i], b = data.nodes[j];
                 if (a.family === b.family) continue;
                 const dx = a.x - b.x, dy = a.y - b.y;
                 const dist = Math.sqrt(dx * dx + dy * dy) || 1;
-                if (dist > 350) continue;
+                if (dist > 400) continue;
                 const force = strength * alpha / dist;
                 const fx = dx / dist * force, fy = dy / dist * force;
                 a.vx += fx; a.vy += fy;
@@ -555,11 +555,11 @@ function renderNetwork(data) {
                 return sameFamily ? d.score * 0.7 : d.score * 0.2;
             }))
         .force("charge", d3.forceManyBody()
-            .strength(-600)
-            .distanceMax(500))
+            .strength(-1000)
+            .distanceMax(600))
         .force("collision", d3.forceCollide()
-            .radius(d => radiusScale(d.centrality) + 30)
-            .strength(0.7))
+            .radius(d => radiusScale(d.centrality) + 25)
+            .strength(0.8))
         .force("familyRepulsion", familyRepulsion)
         .force("familyGravity", familyGravity)
         .force("center", d3.forceCenter(cx, cy).strength(0.02));
@@ -571,7 +571,7 @@ function renderNetwork(data) {
         .join("line")
         .attr("stroke", "#c0c0c0")
         .attr("stroke-width", d => edgeWidthScale(d.score))
-        .attr("stroke-opacity", 0.45);
+        .attr("stroke-opacity", 0.25);
 
     // Draw nodes
     const node = svg.append("g")
@@ -647,7 +647,7 @@ function renderNetwork(data) {
         if (activeIds.size === 0) {
             // Reset everything
             link.attr("stroke", "#c0c0c0")
-                .attr("stroke-opacity", 0.45)
+                .attr("stroke-opacity", 0.25)
                 .attr("stroke-width", d => edgeWidthScale(d.score));
             node.select("circle").attr("opacity", 1);
             node.select("text").attr("opacity", 1);
