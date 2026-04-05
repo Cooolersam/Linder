@@ -884,6 +884,38 @@ function renderNetwork(data) {
 
 const compareLookups = {};  // lang_code -> { en_word: { f, r, s } }
 
+// LibreTranslate fallback for words not in our dictionary
+const LT_MIRRORS = [
+    "https://translate.fedilab.app/translate",
+    "https://lt.vern.cc/translate",
+    "https://translate.argosopentech.com/translate",
+];
+// Map our codes to LibreTranslate codes (only where they differ or exist)
+const LT_CODES = {
+    "zh": "zh-Hans", "nb": "nb", "tl": "tl", "sh": "sr",
+    // Most of our ISO 639-1 codes match LibreTranslate directly
+};
+
+async function liveTranslate(word, targetCode) {
+    const ltCode = LT_CODES[targetCode] || targetCode;
+    for (const mirror of LT_MIRRORS) {
+        try {
+            const resp = await fetch(mirror, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ q: word, source: "en", target: ltCode }),
+                signal: AbortSignal.timeout(4000),
+            });
+            if (!resp.ok) continue;
+            const data = await resp.json();
+            if (data.translatedText && data.translatedText.toLowerCase() !== word.toLowerCase()) {
+                return data.translatedText;
+            }
+        } catch (e) { continue; }
+    }
+    return null;
+}
+
 async function loadLookup(code) {
     if (compareLookups[code]) return compareLookups[code];
     try {
@@ -966,21 +998,31 @@ function initCompare() {
         }
 
         const lookup = await loadLookup(code);
-        const entry = lookup[word];
+        let entry = lookup[word];
+        let source = "dictionary";
 
+        // Fallback: live translation via LibreTranslate
         if (!entry) {
-            resultEl.innerHTML = `<span class="compare-placeholder">Word not found in dictionary</span>`;
-            detailsEl.classList.add("hidden");
-            return;
+            resultEl.innerHTML = `<span class="compare-placeholder">Translating...</span>`;
+            const translated = await liveTranslate(word, code);
+            if (!translated) {
+                resultEl.innerHTML = `<span class="compare-placeholder">Word not found</span>`;
+                detailsEl.classList.add("hidden");
+                return;
+            }
+            entry = { f: translated, r: translated.toLowerCase() };
+            source = "live";
         }
 
         // Show translation
         const foreign = entry.f;
         const romanized = entry.r;
         const showRom = romanized !== foreign;
+        const liveTag = source === "live" ? `<span style="margin-left:8px;font-size:0.7rem;background:#e8f4ff;color:var(--accent);padding:2px 6px;border-radius:4px">LIVE</span>` : "";
 
         resultEl.innerHTML = `<strong style="font-size:1.2rem">${foreign}</strong>` +
-            (showRom ? `<span style="margin-left:8px;color:var(--text-secondary);font-family:var(--mono);font-size:0.9rem">${romanized}</span>` : "");
+            (showRom ? `<span style="margin-left:8px;color:var(--text-secondary);font-family:var(--mono);font-size:0.9rem">${romanized}</span>` : "") +
+            liveTag;
 
         // Compute detailed metrics client-side
         const metrics = computeMetrics(word, romanized);
