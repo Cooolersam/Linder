@@ -883,15 +883,14 @@ function renderNetwork(data) {
             const members = data.nodes.filter(n => n.family === family);
             if (members.length === 0) return;
 
-            // Find the topmost node in the cluster to place label above it
-            const cx = d3.mean(members, m => m.x);
-            const topY = d3.min(members, m => m.y);
-            const labelY = topY - 30;  // above the highest node
+            // Equal-weight centroid of all family members, offset above
+            const centX = d3.mean(members, m => m.x);
+            const centY = d3.mean(members, m => m.y);
+            const labelY = centY - 30;
 
             const g = d3.select(this);
             const textEl = g.select("text");
-            // Clamp within viewBox
-            const clampedX = Math.max(70, Math.min(width - 70, cx));
+            const clampedX = Math.max(70, Math.min(width - 70, centX));
             const clampedY = Math.max(16, Math.min(height - 16, labelY));
             textEl.attr("x", clampedX).attr("y", clampedY);
 
