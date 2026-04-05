@@ -30,6 +30,9 @@ const FAMILY_COLORS = {
     "Armenian":       "#4E342E",
     "Constructed":    "#37474F",
     "Mongolic":       "#827717",
+    "Chadic":         "#E65100",
+    "Cushitic":       "#FF6D00",
+    "Basque":         "#006064",
 };
 
 function familyColor(family) {

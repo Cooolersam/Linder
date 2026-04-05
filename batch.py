@@ -149,6 +149,31 @@ LANGUAGES = {
     "lo": {"name": "Lao",                "family": "Tai-Kadai",     "romanize": "unidecode"},
     # ---- Additional Sino-Tibetan ----
     "my": {"name": "Burmese",            "family": "Sino-Tibetan",  "romanize": "unidecode"},
+    # ---- PanLex languages ----
+    "am":  {"name": "Amharic",           "family": "Semitic",       "romanize": "unidecode"},
+    "ha":  {"name": "Hausa",             "family": "Chadic",        "romanize": None},
+    "yo":  {"name": "Yoruba",            "family": "Niger-Congo",   "romanize": None},
+    "ig":  {"name": "Igbo",              "family": "Niger-Congo",   "romanize": None},
+    "zu":  {"name": "Zulu",              "family": "Niger-Congo",   "romanize": None},
+    "so":  {"name": "Somali",            "family": "Cushitic",      "romanize": None},
+    "ne":  {"name": "Nepali",            "family": "Indo-Iranian",  "romanize": "iast"},
+    "pa":  {"name": "Punjabi",           "family": "Indo-Iranian",  "romanize": "unidecode"},
+    "gu":  {"name": "Gujarati",          "family": "Indo-Iranian",  "romanize": "unidecode"},
+    "kn":  {"name": "Kannada",           "family": "Dravidian",     "romanize": "unidecode"},
+    "te":  {"name": "Telugu",            "family": "Dravidian",     "romanize": "unidecode"},
+    "ml":  {"name": "Malayalam",         "family": "Dravidian",     "romanize": "unidecode"},
+    "si":  {"name": "Sinhala",           "family": "Indo-Iranian",  "romanize": "unidecode"},
+    "ps":  {"name": "Pashto",            "family": "Indo-Iranian",  "romanize": "unidecode"},
+    "eu":  {"name": "Basque",            "family": "Basque",        "romanize": None},
+    "mt":  {"name": "Maltese",           "family": "Semitic",       "romanize": None},
+    "haw": {"name": "Hawaiian",          "family": "Austronesian",  "romanize": None},
+    "sm":  {"name": "Samoan",            "family": "Austronesian",  "romanize": None},
+    "sc":  {"name": "Sardinian",         "family": "Romance",       "romanize": None},
+    "ti":  {"name": "Tigrinya",          "family": "Semitic",       "romanize": "unidecode"},
+    "rw":  {"name": "Kinyarwanda",       "family": "Niger-Congo",   "romanize": None},
+    "sn":  {"name": "Shona",             "family": "Niger-Congo",   "romanize": None},
+    "ny":  {"name": "Chichewa",          "family": "Niger-Congo",   "romanize": None},
+    "or":  {"name": "Odia",              "family": "Indo-Iranian",  "romanize": "unidecode"},
 }
 
 
