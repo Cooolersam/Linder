@@ -1145,11 +1145,11 @@ function openSidebar(langNode, graphData) {
 
     // Build compare dropdown options
     const langOptionsHtml = allLangScores.map(l =>
-        `<option value="${l.id}">${l.name} (${l.score.toFixed(3)})</option>`
+        `<option value="${l.id}">${l.name}</option>`
     ).join("");
 
-    const familyOptionsHtml = sortedFamilies.map(([fam, score]) =>
-        `<option value="${fam}">${fam} (${score.toFixed(3)})</option>`
+    const familyOptionsHtml = sortedFamilies.map(([fam]) =>
+        `<option value="${fam}">${fam}</option>`
     ).join("");
 
     content.innerHTML = `
