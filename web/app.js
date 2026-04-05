@@ -1143,14 +1143,16 @@ function openSidebar(langNode, graphData) {
         })
         .sort((a, b) => b.score - a.score);
 
-    // Build compare dropdown options
-    const langOptionsHtml = allLangScores.map(l =>
-        `<option value="${l.id}">${l.name}</option>`
-    ).join("");
+    // Build compare dropdown options (alphabetical)
+    const langOptionsHtml = [...allLangScores]
+        .sort((a, b) => a.name.localeCompare(b.name))
+        .map(l => `<option value="${l.id}">${l.name}</option>`)
+        .join("");
 
-    const familyOptionsHtml = sortedFamilies.map(([fam]) =>
-        `<option value="${fam}">${fam}</option>`
-    ).join("");
+    const familyOptionsHtml = [...sortedFamilies]
+        .sort((a, b) => a[0].localeCompare(b[0]))
+        .map(([fam]) => `<option value="${fam}">${fam}</option>`)
+        .join("");
 
     content.innerHTML = `
         <div class="sidebar-header">
