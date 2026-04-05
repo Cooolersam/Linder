@@ -100,6 +100,13 @@ async function init() {
     const resp = await fetch(`${DATA_BASE}/summary.json`);
     summaryData = await resp.json();
     document.getElementById("lang-count").textContent = summaryData.length;
+    // Pre-load cross matrix (needed for sidebar family comparisons)
+    try {
+        const crossResp = await fetch(`${DATA_BASE}/cross_matrix.json`);
+        crossData = await crossResp.json();
+        crossData.languages = crossData.languages.filter(l => l.code !== "bn");
+        crossData.pairs = crossData.pairs.filter(p => p.a !== "bn" && p.b !== "bn");
+    } catch (e) { console.warn("Cross matrix not available:", e); }
     loadAndRenderNetwork();
 }
 
@@ -1510,11 +1517,12 @@ let crossData = null;
 
 async function loadAndRenderHeatmap() {
     try {
-        const resp = await fetch(`${DATA_BASE}/cross_matrix.json`);
-        crossData = await resp.json();
-        // Filter out Bengali (unreliable due to small sample sizes)
-        crossData.languages = crossData.languages.filter(l => l.code !== "bn");
-        crossData.pairs = crossData.pairs.filter(p => p.a !== "bn" && p.b !== "bn");
+        if (!crossData) {
+            const resp = await fetch(`${DATA_BASE}/cross_matrix.json`);
+            crossData = await resp.json();
+            crossData.languages = crossData.languages.filter(l => l.code !== "bn");
+            crossData.pairs = crossData.pairs.filter(p => p.a !== "bn" && p.b !== "bn");
+        }
         renderHeatmap("avg");
 
         document.getElementById("heatmapSort").addEventListener("change", (e) => {
