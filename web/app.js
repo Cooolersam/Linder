@@ -603,6 +603,23 @@ function renderNetwork(data) {
         });
     }
 
+    // Ambient drift — gentle random jitter until user interacts
+    let ambientActive = true;
+    function ambientDrift(alpha) {
+        if (!ambientActive) return;
+        data.nodes.forEach(d => {
+            d.vx += (Math.random() - 0.5) * 1.5;
+            d.vy += (Math.random() - 0.5) * 1.5;
+        });
+    }
+
+    function freezeAmbient() {
+        if (!ambientActive) return;
+        ambientActive = false;
+        simulation.force("ambient", null);
+        simulation.alphaTarget(0);  // let it cool naturally now
+    }
+
     // Force simulation — family-clustered, zoomed-out layout
     const simulation = d3.forceSimulation(data.nodes)
         .force("link", d3.forceLink(data.edges)
@@ -629,7 +646,10 @@ function renderNetwork(data) {
             .strength(0.9))
         .force("familyRepulsion", familyRepulsion)
         .force("familyGravity", familyGravity)
-        .force("center", d3.forceCenter(cx, cy).strength(0.015));
+        .force("ambient", ambientDrift)
+        .force("center", d3.forceCenter(cx, cy).strength(0.015))
+        .alphaTarget(0.03)   // keep alive with gentle warmth
+        .alphaDecay(0.005);  // slow cooldown
 
     // Draw edges
     const link = zoomG.append("g")
@@ -820,6 +840,7 @@ function renderNetwork(data) {
     // Click node: toggle selection, show persistent tooltip
     node.on("click", function(event, d) {
         event.stopPropagation();
+        freezeAmbient();
         highlightMode = "node";
         selected.clear();
         selected.add(d.id);
@@ -890,6 +911,7 @@ function renderNetwork(data) {
     // Click family label: select all nodes in that family
     familyLabels.on("click", function(event, family) {
         event.stopPropagation();
+        freezeAmbient();
         highlightMode = "family";
         const familyNodeIds = data.nodes.filter(n => n.family === family).map(n => n.id);
         // Toggle: if all are already selected, deselect them; else clear + select this family
@@ -997,8 +1019,12 @@ function renderNetwork(data) {
         selected.clear();
         applyHighlight(selected);
         tooltip.style.display = "none";
+        closeSidebar();
         svg.transition().duration(500).call(zoom.transform, d3.zoomIdentity);
-        simulation.alpha(0.5).restart();
+        // Restart ambient drift
+        ambientActive = true;
+        simulation.force("ambient", ambientDrift);
+        simulation.alphaTarget(0.03).alpha(0.5).restart();
     };
 
     // Build legend
