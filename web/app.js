@@ -488,11 +488,11 @@ function renderNetwork(data) {
 
     const tooltip = document.getElementById("networkTooltip");
 
-    // Scale node radius — small dots
+    // Scale node radius — exponential: top connectors pop, average ones stay small
     const centralityExtent = d3.extent(data.nodes, d => d.centrality);
-    const radiusScale = d3.scaleSqrt()
+    const radiusScale = d3.scalePow().exponent(3)
         .domain(centralityExtent)
-        .range([3, 10]);
+        .range([3, 14]);
 
     // Scale edge width — thin lines
     const scoreExtent = d3.extent(data.edges, d => d.score);
