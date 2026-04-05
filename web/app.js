@@ -521,17 +521,56 @@ function renderNetwork(data) {
         .domain(scoreExtent)
         .range([0.2, 2.5]);
 
-    // ---- Family home regions ----
-    // Spread families across a wider ellipse so groups have clear gaps
+    // ---- Family home regions (similarity-based placement) ----
+    // Run a mini force sim on families so similar families end up near each other
     const uniqueFamilies = [...new Set(data.nodes.map(n => n.family))];
-    const familyTargets = {};
     const cx = width / 2, cy = height / 2;
-    const rx = width * 0.40, ry = height * 0.40;
-    uniqueFamilies.forEach((fam, i) => {
-        const angle = (2 * Math.PI * i) / uniqueFamilies.length - Math.PI / 2;
-        familyTargets[fam] = {
-            x: cx + rx * Math.cos(angle),
-            y: cy + ry * Math.sin(angle),
+
+    // Compute average similarity between each pair of families
+    const famMembers = {};
+    uniqueFamilies.forEach(f => { famMembers[f] = data.nodes.filter(n => n.family === f).map(n => n.id); });
+
+    const famEdges = [];
+    if (crossData && crossData.matrix) {
+        for (let i = 0; i < uniqueFamilies.length; i++) {
+            for (let j = i + 1; j < uniqueFamilies.length; j++) {
+                const f1 = uniqueFamilies[i], f2 = uniqueFamilies[j];
+                let total = 0, count = 0;
+                for (const c1 of famMembers[f1]) {
+                    for (const c2 of famMembers[f2]) {
+                        const v = crossData.matrix[`${c1}-${c2}`];
+                        if (v !== undefined) { total += v; count++; }
+                    }
+                }
+                if (count > 0) famEdges.push({ source: f1, target: f2, score: total / count });
+            }
+        }
+    }
+
+    // Create family nodes with random initial positions
+    const famNodes = uniqueFamilies.map((f, i) => {
+        const angle = (2 * Math.PI * i) / uniqueFamilies.length;
+        return { id: f, x: cx + 200 * Math.cos(angle), y: cy + 200 * Math.sin(angle) };
+    });
+
+    // Run a quick synchronous force sim on families (50 ticks)
+    const famSim = d3.forceSimulation(famNodes)
+        .force("link", d3.forceLink(famEdges).id(d => d.id)
+            .distance(d => 400 * (1 - d.score))
+            .strength(d => d.score * 1.5))
+        .force("charge", d3.forceManyBody().strength(-300))
+        .force("center", d3.forceCenter(cx, cy))
+        .force("collision", d3.forceCollide(80))
+        .stop();
+    for (let i = 0; i < 80; i++) famSim.tick();
+
+    // Clamp and store family positions
+    const familyTargets = {};
+    const margin = 150;
+    famNodes.forEach(fn => {
+        familyTargets[fn.id] = {
+            x: Math.max(margin, Math.min(width - margin, fn.x)),
+            y: Math.max(margin, Math.min(height - margin, fn.y)),
         };
     });
 
